@@ -110,7 +110,7 @@ c start plotting
         call pgbegin(0,'/ps',1,1)
         call pgslw(2)
        endif       
-       call pgsci(1)
+       call pgsci(0)
        call pgsfs(1)
        call pgenv(xleft,xrigh,ysize,0.,1,iaxis)     
        write(6,*)'length of size-bar? (integer in solar radii?)'
@@ -154,7 +154,7 @@ c start on left lobe
          enddo
         xpl(nl+1)=x
         ypl(nl+1)=0.
-        write(6,*)'left lobe done'
+!        write(6,*)'left lobe done'
 c and right lobe
         dxr=(xpl(npl)-x)/(nl+1)
          do i=2,nl+1
@@ -168,7 +168,7 @@ c and right lobe
           xpl(nl+i)=xl
           ypl(nl+i)=sqrt(ysq)
          enddo
-        write(6,*)'right lobe done'
+!        write(6,*)'right lobe done'
 c now enlarge and shift lobes:
          xmult=asep
          xshift=-asep*xm2/(xm1+xm2)
@@ -194,7 +194,7 @@ c start on stars, left first: (for use of rad1, see above, at begin)
           rad=rad1(itel)
           if(rad2(itel).gt.1.e5)then
            radd=0.7*asep*x
-           call disk(xshift,yshift,rad,radd)
+!           call disk(xshift,yshift,rad,radd)
           endif
           if(rad.lt.ysize/500.)then
            call pgpoint(1,xshift,yshift,17)
@@ -233,7 +233,7 @@ c and write labels
           write(label(4),103)rmc(itel)
          endif
          write(label(3),102)pb(itel)
-102      format(f7.1)
+102      format(f7.3)
 103      format(f5.1)
          do k=1,klabel
            call pgtext(xtl(k),yshift,label(k))
