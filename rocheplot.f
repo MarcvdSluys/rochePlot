@@ -14,19 +14,20 @@ c
 c next, the individual graphs are made
 c
       parameter(npl=100,ng=10)
+      integer :: nev
       dimension rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng),
-     c hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(4),
-     c pb(ng),rmc(ng)
-      character*50 text,label(4)
-      character*1 yaa(8)
+     & hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(4),
+     & pb(ng),rmc(ng)
+      integer :: narg,iargc
+      character :: text*50,label(4)*50,yaa(8),bla,title*50,fname*50
       external rlimit,rline
       common/roche/ q,q11,const,const2,xsq,onexsq
       data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)',
-     c 'P\db\u(d)','M\dc\u(M\d\(2281)\u)'/
+     & 'P\db\u(d)','M\dc\u(M\d\(2281)\u)'/
       data yaa/'c','d','e','f','g','h','g','h'/
 c some physical constants
       data gravc,sunm,sunr,sunl,pi
-     c /6.668e-8,1.989e33,6.96e10,3.846e33,3.1415926/
+     & /6.668e-8,1.989e33,6.96e10,3.846e33,3.1415926/
 c
 c constant for orbital separation from mass and orbital period:
       csep=((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
@@ -39,13 +40,28 @@ c      read(5,*)iaxis
 c      write(6,*)'if M1, M2, and Pb are labels: type 3'
 c      write(6,*)'if to these the core mass is added: type 4'
 c      read(5,*)klabel
-       klabel=3
+!       klabel=3
       
       xmin = 0.
       xmax = 0.
       
-      open(unit=10,form='formatted',status='old',file='input.dat')
-      do itel=1,ng
+      
+      !Read command-line variables
+      narg = iargc()
+      if(narg.eq.1) then
+        call getarg(1,fname)
+      else 
+        fname = 'input.dat                                         '
+      endif
+      
+      
+      print*,'Reading input file ',fname
+      open(unit=10,form='formatted',status='old',file=fname)
+      read(10,*)klabel
+      read(10,*)nev
+      if(nev.gt.ng) print*,'Increase the value of ng!'
+      read(10,*)bla
+      do itel=1,nev
         if(klabel.eq.3) then
           read(10,*,end=2)rm1(itel),rm2(itel),pb(itel),rad1(itel),
      c    rad2(itel)
@@ -110,29 +126,43 @@ c after all limits have been sampled, now calculate plot limits
       write(6,*)'Plot limits: ',xleft,xrigh,ysize
       
 c start plotting
-      write(6,*)'To plot on screen, type 1'
-      read(5,*)iscr
+!      write(6,*)'To plot on screen, type 1'
+!      read(5,*)iscr
+      read(10,*)iscr
       if(iscr.eq.1) then
-        call pgbegin(0,'/xw',1,1)
+        call pgbegin(0,'/xs',1,1)
       else
         write(6,*)'Plot written to rochelobes.eps'
         call pgbegin(0,'rochelobes.eps/ps',1,1)
         call pgslw(2)
+	call pgscf(2)
       endif	  
       call pgsci(1)
       call pgsfs(1)
       call pgenv(xleft,xrigh,ysize,0.,1,iaxis)     
-      write(6,*)'Length of size-bar? (integer in solar radii?)'
-      read(5,*) ilen
-      if(klabel.eq.3) then
-        write(6,*)'x-positions of: M1, M2, Pb,xaa'
-      else
-        write(6,*)'x-positions of: M1, M2, Pb, Mc'
-      endif
-      read(5,*)(xtl(k),k=1,klabel),xaa
+!      write(6,*)'Length of size-bar? (integer in solar radii?)'
+!      read(5,*) ilen
+      read(10,*) ilen
+!      if(klabel.eq.3) then
+!        write(6,*)'x-positions of: M1, M2, Pb,xaa'
+!      else
+!        write(6,*)'x-positions of: M1, M2, Pb, Mc'
+!      endif
+!      read(5,*)(xtl(k),k=1,klabel),xaa
+      read(10,*) xtl(1)
+      read(10,*) xtl(2)
+      read(10,*) xtl(3)
+      read(10,*) xtl(4)
+      read(10,'(A50)') label(4)
       do kl=1,klabel
-        if(xtl(kl).ne.0.) call pgtext(xtl(kl),0.,label(kl))
+        if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,label(kl))
       enddo
+      read(10,'(A50)') title
+      if(title(1:10).ne.'          ') then
+        call pgsch(1.5)
+	call pgptxt(0.,-3*ymargin,0.,0.5,title)
+        call pgsch(1.)
+      endif
       
       do itel=1,ktel
         xm1 = rm1(itel)
@@ -204,9 +234,10 @@ c start on stars, left first: (for use of rad1, see above, at begin)
           call pgpoly(nl+1,xpl,ypl2)
         else
           rad = rad1(itel)
-          if(rad2(itel).gt.1.e5) then
+!          if(rad2(itel).gt.1.e5) then
+          if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
             radd = 0.7*asep*x
-!           call disk(xshift,yshift,rad,radd)
+            call disk(xshift,yshift,rad,radd)
           endif
           if(rad.lt.ysize/500.) then
             call pgpoint(1,xshift,yshift,17)
@@ -226,7 +257,8 @@ c right:
           call pgpoly(nl+2,xpl,ypl2)
         else
           rad = rad2(itel)
-          if(rad1(itel).gt.1.e5) then
+!          if(rad1(itel).gt.1.e5) then
+          if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
             radd = 0.7*asep*(1.-x)
             call disk(xshift+asep,yshift,rad,radd)
           endif
@@ -244,13 +276,14 @@ c and write labels
         else
           write(label(1),103) rm1(itel)
           write(label(2),103) rm2(itel)
-          write(label(4),103) rmc(itel)
+          write(label(4),102) rmc(itel)
         endif
-        write(label(3),102) pb(itel)
+        write(label(3),104) pb(itel)
 102     format(f7.3)
-103     format(f5.1)
+103     format(f5.2)
+104     format(f6.2)
         do k=1,klabel
-          call pgtext(xtl(k),yshift,label(k))
+          call pgptxt(xtl(k),yshift,0.,0.5,label(k))
         enddo
 !         call pgtext(xaa,yshift,yaa(itel))
       enddo
@@ -259,33 +292,40 @@ c plot size bar
       xlen = ilen*1.
       xpl(2) = xlen/2.
       xpl(1) = -xpl(2)
-      yshift = yshift+hei(ktel)+2.*ymargin
+!      yshift = yshift+hei(ktel)+2*ymargin
+      yshift = yshift+hei(ktel)+5*ymargin
       ypl(1) = yshift
       ypl(2) = ypl(1)
       call pgline(2,xpl,ypl)
       write(text,101)ilen
 101   format(i5,'R\d\(2281)')
-      call pgtext(xpl(2),ypl(2),text)
+!      call pgtext(xpl(2),ypl(2),text)
+      call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
       
 c and axis of rotation
       xpl(1) = 0.
       xpl(2) = 0.
       ypl(1) = 0.
-      ypl(2) = yshift+ymargin
+!      ypl(2) = yshift+ymargin
+      ypl(2) = yshift-ymargin
       call pgsls(4)
       call pgline(2,xpl,ypl)
       call pgsls(1)
       
 c add texts, if necessary
-123   write(6,*)'give position (x,y) of text'
-      write(6,*)'x=0. means: no text to be added'
-      read(5,*)xt,yt
-      if(xt.ne.0.) then
-        write(6,*)'give text string'
-        read(5,99)text
-        call pgtext(xt,yt,text)
-        goto 123
-      endif
+!123   write(6,*)'give position (x,y) of text'
+!      write(6,*)'x=0. means: no text to be added'
+!      read(5,*)xt,yt
+!      if(xt.ne.0.) then
+!        write(6,*)'give text string'
+!        read(5,99)text
+!        call pgtext(xt,yt,text)
+!        goto 123
+!      endif
+      read(10,*)xt
+      read(10,*)yt
+      read(10,99)text
+      if(xt.ne.0.) call pgtext(xt,yt,text)
 99    format(a)
       call pgend
       end
