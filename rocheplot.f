@@ -23,7 +23,7 @@ c
       external rlimit,rline
       common/roche/ q,q11,const,const2,xsq,onexsq
       data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)',
-     & 'P\db\u(d)','M\dc\u(M\d\(2281)\u)'/
+     & 'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)'/
       data yaa/'c','d','e','f','g','h','g','h'/
 c some physical constants
       data gravc,sunm,sunr,sunl,pi
@@ -129,17 +129,56 @@ c start plotting
 !      write(6,*)'To plot on screen, type 1'
 !      read(5,*)iscr
       read(10,*)iscr
-      if(iscr.eq.1) then
-        call pgbegin(0,'/xs',1,1)
-      else
+      if(iscr.eq.0) then
         write(6,*)'Plot written to rochelobes.eps'
         call pgbegin(0,'rochelobes.eps/ps',1,1)
         call pgslw(2)
 	call pgscf(2)
+      else if(iscr.eq.1) then
+        call pgbegin(1,'/xs',1,1)
+      else if(iscr.eq.2) then
+        call pgbegin(1,'/aq',1,1)
+	call pgscf(2)
       endif	  
-      call pgsci(1)
+      if(1.eq.2.and.iscr.eq.1.or.iscr.eq.2) then     !Create a white background; swap black (ci=0) and white (ci=1)
+        call pgsci(0)
+        call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
+        call pgscr(1,0.,0.,0.)
+        call pgsvp(0.,1.,0.,1.)
+        call pgswin(-1.,1.,-1.,1.)
+        call pgrect(-2.,2.,-2.,2.)
+	
+        call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
+        call pgscr(1,0.,0.,0.)
+        call pgsvp(0.,1.,0.,1.)
+        call pgswin(-1.,1.,-1.,1.)
+        call pgrect(-2.,2.,-2.,2.)
+        call pgsci(1)
+      endif
       call pgsfs(1)
-      call pgenv(xleft,xrigh,ysize,0.,1,iaxis)     
+      
+!!      call pgsvp(0.06,0.95,0.07,0.96)
+!      if(iscr.eq.2) then
+!!        call pgsvp(0.25,0.75,0.07,0.96)
+!!        call pgswin(xleft,xrigh,ysize,0.)
+!        call pgenv(xleft,xrigh,ysize,0.,1,iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
+!        call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
+!        call pgscr(1,0.,0.,0.)
+!	call pgsci(0)
+!        call pgrect(xleft-abs(xleft-xrigh),xrigh+abs(xleft-xrigh),2*ysize,-ysize)
+!	
+!      else
+!        call pgenv(xleft,xrigh,ysize,0.,1,iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?)    
+!      endif
+      
+      
+      call pgenv(xleft,xrigh,ysize,0.,1,iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
+      call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
+      call pgscr(1,0.,0.,0.)
+      call pgsci(0)
+      call pgrect(xleft-10*abs(xleft-xrigh),xrigh+10*abs(xleft-xrigh),10*ysize,-10*ysize)
+      call pgsci(1)
+      
 !      write(6,*)'Length of size-bar? (integer in solar radii?)'
 !      read(5,*) ilen
       read(10,*) ilen
@@ -225,26 +264,35 @@ c now enlarge and shift lobes:
           ypl2(i) = -swap + yshift
         enddo
 c and plot them
-        call pgline(npl,xpl,ypl)
-        call pgline(npl,xpl,ypl2)
+!        call pgline(npl,xpl,ypl)
+!        call pgline(npl,xpl,ypl2)
 	 
 c start on stars, left first: (for use of rad1, see above, at begin)
         if(rad1(itel).gt.1.e5) then
+	  call pgsci(15)
           call pgpoly(nl+1,xpl,ypl)
           call pgpoly(nl+1,xpl,ypl2)
+	  call pgsci(1)
         else
           rad = rad1(itel)
 !          if(rad2(itel).gt.1.e5) then
           if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
             radd = 0.7*asep*x
+	    call pgsci(15)
             call disk(xshift,yshift,rad,radd)
+	    call pgsci(1)
           endif
-          if(rad.lt.ysize/500.) then
-            call pgpoint(1,xshift,yshift,17)
-          else
-            call cirkel(xshift,yshift,rad,40)
-          endif
-        endif    
+!          if(abs(rad).lt.ysize*0.001) then
+!            call pgpoint(1,xshift,yshift,17)
+!          else
+!            call cirkel(xshift,yshift,abs(rad),40)
+!          endif
+          call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
+        endif   
+	 
+c Plot Roche lobe after star
+        call pgline(npl,xpl,ypl)
+        call pgline(npl,xpl,ypl2)
 	      
 c right:
         if(rad2(itel).gt.1.e5) then
@@ -253,21 +301,29 @@ c right:
             ypl(i) = ypl(i+nl)
             ypl2(i) = ypl2(i+nl)
           enddo
+	  call pgsci(15)
           call pgpoly(nl+2,xpl,ypl)
           call pgpoly(nl+2,xpl,ypl2)
+	  call pgsci(1)
         else
           rad = rad2(itel)
 !          if(rad1(itel).gt.1.e5) then
           if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
             radd = 0.7*asep*(1.-x)
+	    call pgsci(15)
             call disk(xshift+asep,yshift,rad,radd)
+	    call pgsci(1)
           endif
-          if(rad.lt.ysize/500.) then
-            call pgpoint(1,xshift+asep,yshift,17)
-          else
-            call cirkel(xshift+asep,yshift,rad,40)
-          endif
+!          if(abs(rad).lt.ysize*0.001) then
+!            call pgpoint(1,xshift+asep,yshift,17)
+!          else
+!            call cirkel(xshift+asep,yshift,abs(rad),40)
+!          endif
+          call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
         endif 
+	
+        call pgline(nl+2,xpl,ypl)
+        call pgline(nl+2,xpl,ypl2)
 	          
 c and write labels
         if(klabel.eq.3) then
@@ -281,12 +337,16 @@ c and write labels
         write(label(3),104) pb(itel)
 102     format(f7.3)
 103     format(f5.2)
-104     format(f6.2)
+104     format(f7.2)
         do k=1,klabel
           call pgptxt(xtl(k),yshift,0.,0.5,label(k))
         enddo
 !         call pgtext(xaa,yshift,yaa(itel))
       enddo
+       
+       
+       
+       
        
 c plot size bar
       xlen = ilen*1.
