@@ -1,18 +1,25 @@
-program proche
-  ! plots rochelobes for systems listed in fort.10
-  !  for each graph: m1, m2, a, r1, r2
+!> \file  rocheplot.f90  Plots Roche lobes for given binaries
+
+
+!***********************************************************************************************************************************
+!> \brief  Plots Roche lobes for given binaries
+
+program rocheplot
+  
+  ! For each graph: m1, m2, a, r1, r2
   ! m1, m2 = masses of left and right star, respectively
   ! a      = distance between stars (in solar radii)
   ! r1, r2 = radii of left and right stars in solar radii
   !  if (r1,r2) > 1.e5 the rochelobe is filled
-  !  if (r1,r2) < 0.   a circle with radius (r1,r2) + disk is drawn
+  !  if (r1,r2) < 0.   a circle with radius (r1,r2) + disc is drawn
   !
   ! the plot is scaled automatically: to do this, first all
   !  required parameters are read, and lobe sizes and positions
   !  estimated
   !
   ! next, the individual graphs are made
-  !
+  
+  
   implicit none
   
   integer, parameter :: npl=100, ng=10
@@ -31,28 +38,22 @@ program proche
   
   common /roche/ q,q11,const,const2,xsq,onexsq
   
+  ! Column headers:
   data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', &
        'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', ''/
   
+  ! Figure labels:
   !data yaa/'c','d','e','f','g','h','g','h'/
   
-  ! some physical constants
+  ! Some physical constants:
   data gravc,sunm,sunr,pi /6.668e-8,1.989e33,6.96e10,3.1415926/
-  !
-  ! constant for orbital separation from mass and orbital period:
-  csep=((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
+  
+  ! Constant for orbital separation from mass and orbital period:
+  csep= ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
   
   ! the necessary parameters are read from file; all together,
   !  to enable calculation of the overall size of the graph.
-  !      write(6,*)'in test run, frame should be included: type 0'
-  !      write(6,*)'otherwise: type -2'
-  !      read(5,*)iaxis
-  iaxis=-2
-  
-  !      write(6,*)'if M1, M2, and Pb are labels: type 3'
-  !      write(6,*)'if to these the core mass is added: type 4'
-  !      read(5,*)klabel
-  !       klabel=3
+  iaxis=-2  ! Draft: 0,  quality: -2
   
   xmin = 0.
   xmax = 0.
@@ -66,17 +67,20 @@ program proche
   end if
   
   
-  print*,'Reading input file ',fname
-  open(unit=10,form='formatted',status='old',file=fname)
-  read(10,*)klabel
-  read(10,*)nev
-  if(nev.gt.ng) print*,'Increase the value of ng!'
-  read(10,*)bla
+  write(*,'(A)') ' Reading input file '//trim(fname)
+  open(unit=10,form='formatted',status='old',file=trim(fname))
+  
+  read(10,*) klabel
+  read(10,*) nev
+  if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
+  
+  read(10,*) bla
+  
   do itel=1,nev
      if(klabel.eq.3) then
-        read(10,*,end=2)rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel)
+        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel)
      else
-        read(10,*,end=2)rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),rmc(itel), txt(itel)
+        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),rmc(itel), txt(itel)
      end if
      
      rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
@@ -102,15 +106,15 @@ program proche
      end if
      
      ! Calculate left limit of lobe (before shift)
-     const = q/x+1./(1.-x)+0.5*(1.+q)*(x-q11)**2
-     x1 = 1.5-0.5*x
-     x2 = 2.0-x
+     const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+     x1 = 1.5 - 0.5*x
+     x2 = 2.0 - x
      xacc = 1.e-4
      rrig(ktel) = rtsafe(rlimit,x1,x2,xacc)
      x1 = -0.5*x
      x2 = -x
      rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)
-     write(6,*)'Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
+     write(*,*) 'Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
      
      ! Calculate limits after enlarging and shift, and keep track of maxima
      asep = rsep(ktel)
@@ -161,30 +165,23 @@ program proche
   
   
   call pgenv(xleft,xrigh,ysize,0., 1, iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
-  !call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
-  !call pgscr(1,0.,0.,0.)
-  call pgsci(0)
-  call pgrect(xleft-10*abs(xleft-xrigh),xrigh+10*abs(xleft-xrigh),10*ysize,-10*ysize)
+  !call pgsci(0)
+  !call pgrect(xleft-10*abs(xleft-xrigh),xrigh+10*abs(xleft-xrigh),10*ysize,-10*ysize)
   call pgsci(1)
   
-  !      write(6,*)'Length of size-bar? (integer in solar radii?)'
-  !      read(5,*) ilen
-  read(10,*) ilen
-  !      if(klabel.eq.3) then
-  !        write(6,*)'x-positions of: M1, M2, Pb,xaa'
-  !      else
-  !        write(6,*)'x-positions of: M1, M2, Pb, Mc'
-  !      end if
-  !      read(5,*)(xtl(k),k=1,klabel),xaa
+  read(10,*) ilen  ! Length of the scale bar
+  
   read(10,*) xtl(1)
   read(10,*) xtl(2)
   read(10,*) xtl(3)
   read(10,*) xtl(4)
   read(10,*) xtl(5)
+  
   read(10,'(A50)') label(4)
   do kl=1,klabel
      if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,label(kl))
   end do
+  
   read(10,'(A50)') title
   if(title(1:10).ne.'          ') then
      call pgsch(1.5)
@@ -205,7 +202,8 @@ program proche
      ypl(1) = 0.
      ypl(npl) = 0.
      
-     ! start on left lobe
+     
+     ! Compute left lobe:
      nl = npl/2-1
      dxl = (x-xpl(1))/nl
      do i = 2,nl
@@ -221,9 +219,10 @@ program proche
      end do
      xpl(nl+1) = x
      ypl(nl+1) = 0.
-     !        write(6,*)'left lobe done'
+     ! write(6,*)'left lobe done'
      
-     ! and right lobe
+     
+     ! Compute right lobe:
      dxr = (xpl(npl)-x)/(nl+1)
      do i = 2,nl+1
         xl = xpl(nl+1)+(i-1)*dxr
@@ -236,28 +235,27 @@ program proche
         xpl(nl+i) = xl
         ypl(nl+i) = sqrt(ysq)
      end do
-     !        write(6,*)'right lobe done'
+     ! write(6,*)'right lobe done'
      
-     ! now enlarge and shift lobes:
+     
+     ! Enlarge and shift lobes:
      xmult = asep
      xshift = -asep*xm2/(xm1+xm2)
      if(itel.eq.1) then
-        yshift = hei(itel)+ymargin
+        yshift = hei(itel) + ymargin
      else
-        yshift = yshift+hei(itel-1)+hei(itel)+ymargin
+        yshift = yshift + hei(itel-1) + hei(itel) + ymargin
      end if
      do i=1,npl
-        xpl(i) = xpl(i)*xmult+xshift
-        swap = ypl(i)*xmult
-        ypl(i) = swap + yshift
+        xpl(i) = xpl(i)*xmult + xshift
+        swap   = ypl(i)*xmult
+        ypl(i)  = swap  + yshift
         ypl2(i) = -swap + yshift
      end do
-     ! and plot them
-     !        call pgline(npl,xpl,ypl)
-     !        call pgline(npl,xpl,ypl2)
      
-     ! start on stars, left first: (for use of rad1, see above, at begin)
-     if(rad1(itel).gt.1.e5) then
+     
+     ! Left star:
+     if(rad1(itel).gt.1.e5) then  ! Rl filling
         call pgsci(15)
         call pgpoly(nl+1,xpl,ypl)
         call pgpoly(nl+1,xpl,ypl2)
@@ -268,26 +266,23 @@ program proche
         if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
            radd = 0.7*asep*x
            call pgsci(15)
-           call disk(xshift,yshift,rad,radd)
+           call plot_disc(xshift,yshift,rad,radd)
            call pgsci(1)
         end if
-        !          if(abs(rad).lt.ysize*0.001) then
-        !            call pgpoint(1,xshift,yshift,17)
-        !          else
-        !            call cirkel(xshift,yshift,abs(rad),40)
-        !          end if
         call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
      end if
      
-     ! Plot Roche lobe after star:
+     ! Plot left Roche lobe after star:
      call pgline(npl,xpl,ypl)
      call pgline(npl,xpl,ypl2)
      
-     ! right:
-     if(rad2(itel).gt.1.e5) then
+     
+     
+     ! Right star:
+     if(rad2(itel).gt.1.e5) then  ! Rl filling
         do i=1,nl+2
-           xpl(i) = xpl(i+nl)
-           ypl(i) = ypl(i+nl)
+           xpl(i)  = xpl(i+nl)
+           ypl(i)  = ypl(i+nl)
            ypl2(i) = ypl2(i+nl)
         end do
         call pgsci(15)
@@ -296,25 +291,23 @@ program proche
         call pgsci(1)
      else
         rad = rad2(itel)
-        !          if(rad1(itel).gt.1.e5) then
         if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
            radd = 0.7*asep*(1.-x)
            call pgsci(15)
-           call disk(xshift+asep,yshift,rad,radd)
+           call plot_disc(xshift+asep,yshift,rad,radd)
            call pgsci(1)
         end if
-        !          if(abs(rad).lt.ysize*0.001) then
-        !            call pgpoint(1,xshift+asep,yshift,17)
-        !          else
-        !            call cirkel(xshift+asep,yshift,abs(rad),40)
-        !          end if
+        
         call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
      end if
      
+     ! Plot right Roche lobe:
      call pgline(nl+2,xpl,ypl)
      call pgline(nl+2,xpl,ypl2)
      
-     ! and write labels:
+     
+     
+     ! Write labels:
      if(klabel.eq.3) then
         write(label(1),'(F7.3)') rm1(itel)
         write(label(2),'(F7.3)') rm2(itel)
@@ -328,9 +321,9 @@ program proche
      
      do k=1,klabel
         if(k.eq.5) then
-           call pgptxt(xtl(k),yshift,0.,0.0,label(k))
+           call pgptxt(xtl(k),yshift,0.,0.0,label(k))  ! Align left
         else
-           call pgptxt(xtl(k),yshift,0.,0.5,label(k))
+           call pgptxt(xtl(k),yshift,0.,0.5,label(k))  ! Align centre
         endif
      end do
      
@@ -352,12 +345,12 @@ program proche
   call pgline(2,xpl,ypl)
   
   
-  write(text,101)ilen
-101 format(i5,'R\d\(2281)')
+  write(text,'(I5,"R\d\(2281)")') ilen
   !      call pgtext(xpl(2),ypl(2),text)
   call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
   
-  ! and axis of rotation
+  
+  ! Plot axis of rotation:
   xpl(1) = 0.
   xpl(2) = 0.
   ypl(1) = 0.
@@ -367,27 +360,27 @@ program proche
   call pgline(2,xpl,ypl)
   call pgsls(1)
   
+  
   ! add texts, if necessary
   !123   write(6,*)'give position (x,y) of text'
   !      write(6,*)'x=0. means: no text to be added'
   !      read(5,*)xt,yt
   !      if(xt.ne.0.) then
   !        write(6,*)'give text string'
-  !        read(5,99)text
+  !        read(5,'(A)') text
   !        call pgtext(xt,yt,text)
   !        goto 123
   !      end if
   
   read(10,*)  xt
   read(10,*)  yt
-  read(10,99) text
+  read(10,'(A)') text
   
   if(xt.ne.0.) call pgtext(xt,yt,text)
   
-99 format(a)
   call pgend
   
-end program proche
+end program rocheplot
 !***********************************************************************************************************************************
 
 
@@ -401,7 +394,7 @@ end program proche
 
 
 !***********************************************************************************************************************************
-!> \brief  Calculates outer limit of roche-lobe
+!> \brief  Calculates outer limit of Roche lobe
 
 subroutine rlimit(x, f,df)
   implicit none
@@ -454,7 +447,7 @@ subroutine cirkel(xc,yc,rad,n)
   integer, intent(in) :: n
   
   integer :: i
-  real :: x(200),y(200), step,phi
+  real :: x(n),y(n), step,phi
   
   step = 6.2831852/(n-1)
   
@@ -471,43 +464,54 @@ end subroutine cirkel
 
 
 !***********************************************************************************************************************************
-!> \brief  Draws disc centered on xc,yc between rad and rlen
+!> \brief  Draws an accretion disc centered on xc,yc between rad and rlen
 
-subroutine disk(xc,yc, rad,rlen)
+subroutine plot_disc(xc,yc, rad,rlen)
   implicit none
   
   real, intent(in) :: xc,yc,rad,rlen
-  real :: x(5),y(5)
+  real :: x(5),y(5), flare
   
-  x(1) = xc+rad
+  flare = 0.15  ! Disc's flare
+  
+  ! Draw right half:
+  x(1) = xc + rad
   x(2) = x(1)
-  x(3) = xc+rlen
+  x(3) = xc + rlen
   x(4) = x(3)
   x(5) = x(1)
-  y(1) = yc+0.15*rad
-  y(2) = yc-0.15*rad
-  y(3) = yc-0.15*rlen
-  y(4) = yc+0.15*rlen
+  y(1) = yc + flare*rad
+  y(2) = yc - flare*rad
+  y(3) = yc - flare*rlen
+  y(4) = yc + flare*rlen
   y(5) = y(1)
   call pgpoly(5,x,y)
   
-  x(1) = xc-rad
+  ! Draw left half:
+  x(1) = xc - rad
   x(2) = x(1)
-  x(3) = xc-rlen
+  x(3) = xc - rlen
   x(4) = x(3)
   x(5) = x(1)
   y(5) = y(1)
   call pgpoly(5,x,y)
-
-end subroutine disk
+  
+end subroutine plot_disc
 !***********************************************************************************************************************************
 
 
 
 !***********************************************************************************************************************************
-!> \see Numerical recipes, p.258
+!> \brief  Find the root of a function bracketed by x1,x2 using a combination of a Newton-Raphson and bisection methods
+!!
+!! \param funcd  User-provided function
+!! \param x1     Lower limit for solution
+!! \param x2     Upper limit for solution
+!! \param xacc   Desired accuracy for solution
+!!
+!! \see Numerical recipes, par.9.4 (p.258 / 359)
 
-function rtsafe(funcd,x1,x2,xacc)
+function rtsafe(funcd, x1,x2, xacc)
   implicit none
   integer, parameter :: maxit=100
   integer :: j
