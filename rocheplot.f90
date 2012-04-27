@@ -16,14 +16,14 @@ program proche
   parameter(npl=100,ng=10)
   integer :: nev
   dimension rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng), &
-       hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(4), &
-       pb(ng),rmc(ng)
+       hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(5), &
+       pb(ng), rmc(ng)
   integer :: narg,iargc
-  character :: text*50,label(4)*50,yaa(8),bla,title*50,fname*50
+  character :: txt(ng)*50, text*50,label(5)*50,yaa(8),bla,title*50,fname*50
   external rlimit,rline
   common/roche/ q,q11,const,const2,xsq,onexsq
   data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', &
-       'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)'/
+       'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', ''/
   data yaa/'c','d','e','f','g','h','g','h'/
   ! some physical constants
   data gravc,sunm,sunr,sunl,pi &
@@ -65,7 +65,7 @@ program proche
      if(klabel.eq.3) then
         read(10,*,end=2)rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel)
      else
-        read(10,*,end=2)rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),rmc(itel)
+        read(10,*,end=2)rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),rmc(itel), txt(itel)
      end if
      
      rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
@@ -111,15 +111,16 @@ program proche
   
 2 continue
   ! after all limits have been sampled, now calculate plot limits
+  ! silly: if bar falls off plot, increase ysize
   xmargin = 0.2*(xmax-xmin)
   ysize = 0.
   do i=1,ktel      
      ysize = ysize+hei(i)
   end do
-  ysize = 2.5*ysize
+  ysize = 2.5*ysize*1.25
   ymargin = 0.02*ysize
   xleft = xmin - xmargin
-  xrigh = xmax + xmargin
+  xrigh = xmax + xmargin*4.
   write(6,*)'Plot limits: ',xleft,xrigh,ysize
   
   read(10,*)iscr
@@ -144,7 +145,7 @@ program proche
   
   
   
-  call pgenv(xleft,xrigh,ysize,0.,1,iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
+  call pgenv(xleft,xrigh,ysize,0., 1, iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
   call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
   call pgscr(1,0.,0.,0.)
   call pgsci(0)
@@ -164,6 +165,7 @@ program proche
   read(10,*) xtl(2)
   read(10,*) xtl(3)
   read(10,*) xtl(4)
+  read(10,*) xtl(5)
   read(10,'(A50)') label(4)
   do kl=1,klabel
      if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,label(kl))
@@ -305,13 +307,19 @@ program proche
         write(label(1),103) rm1(itel)
         write(label(2),103) rm2(itel)
         write(label(4),102) rmc(itel)
+        write(label(5),105) trim(txt(itel))
      end if
      write(label(3),104) pb(itel)
 102  format(f7.3)
 103  format(f5.2)
 104  format(f7.2)
+105  format(a)
      do k=1,klabel
-        call pgptxt(xtl(k),yshift,0.,0.5,label(k))
+        if(k.eq.5) then
+           call pgptxt(xtl(k),yshift,0.,0.0,label(k))
+        else
+           call pgptxt(xtl(k),yshift,0.,0.5,label(k))
+        endif
      end do
      !         call pgtext(xaa,yshift,yaa(itel))
   end do
@@ -329,6 +337,8 @@ program proche
   ypl(1) = yshift
   ypl(2) = ypl(1)
   call pgline(2,xpl,ypl)
+  
+  
   write(text,101)ilen
 101 format(i5,'R\d\(2281)')
   !      call pgtext(xpl(2),ypl(2),text)
@@ -403,8 +413,8 @@ subroutine cirkel(xc,yc,rad,n)
   end do
   call pgpoly(n,x,y)
 end subroutine cirkel
-  
-  
+
+
 subroutine disk(xc,yc,rad,rlen)                                 
   ! draws disk centered on xc,yc between rad and rlen
   real x(5),y(5)                                                  
@@ -473,5 +483,7 @@ function rtsafe(funcd,x1,x2,xacc)
         fh=f
      end if
   end do
+  
   write(0,'(A)')' rtsafe exceeds maximum iterations'
+  
 end function rtsafe
