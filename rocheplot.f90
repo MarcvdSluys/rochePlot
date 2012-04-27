@@ -13,30 +13,42 @@ program proche
   !
   ! next, the individual graphs are made
   !
-  parameter(npl=100,ng=10)
-  integer :: nev
-  dimension rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng), &
-       hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(5), &
-       pb(ng), rmc(ng)
-  integer :: narg,iargc
-  character :: txt(ng)*50, text*50,label(5)*50,yaa(8),bla,title*50,fname*50
+  implicit none
+  
+  integer, parameter :: npl=100, ng=10
+  integer :: nev, i,iaxis,ilen,iscr,itel,k,kl,klabel,ktel,nl
+  
+  real :: rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(5)
+  real :: pb(ng), rmc(ng)
+  real :: asep, q,q11,const,const2,xsq,onexsq, csep,dfx,dx,dxl,dxr,fx, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
+  real :: x,x1,x2,xacc,xl,xleft,xlen,xm1,xm2,xmargin,xmax,xmin,xmult,xrigh,xright,xshift,xt
+  real :: y1,y2,ymargin,yshift,ysize,ysq,yt
+  
+  integer :: command_argument_count
+  character :: txt(ng)*50, text*50,label(5)*50,bla,title*50,fname*50  !,yaa(8)
+  
   external rlimit,rline
-  common/roche/ q,q11,const,const2,xsq,onexsq
+  
+  common /roche/ q,q11,const,const2,xsq,onexsq
+  
   data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', &
        'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', ''/
-  data yaa/'c','d','e','f','g','h','g','h'/
+  
+  !data yaa/'c','d','e','f','g','h','g','h'/
+  
   ! some physical constants
-  data gravc,sunm,sunr,sunl,pi &
-       /6.668e-8,1.989e33,6.96e10,3.846e33,3.1415926/
+  data gravc,sunm,sunr,pi /6.668e-8,1.989e33,6.96e10,3.1415926/
   !
   ! constant for orbital separation from mass and orbital period:
   csep=((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
+  
   ! the necessary parameters are read from file; all together,
   !  to enable calculation of the overall size of the graph.
   !      write(6,*)'in test run, frame should be included: type 0'
   !      write(6,*)'otherwise: type -2'
   !      read(5,*)iaxis
   iaxis=-2
+  
   !      write(6,*)'if M1, M2, and Pb are labels: type 3'
   !      write(6,*)'if to these the core mass is added: type 4'
   !      read(5,*)klabel
@@ -46,10 +58,9 @@ program proche
   xmax = 0.
   
   
-  ! Read command-line variables
-  narg = iargc()
-  if(narg.eq.1) then
-     call getarg(1,fname)
+  ! Read command-line variables:
+  if(command_argument_count().eq.1) then
+     call get_command_argument(1, fname)
   else 
      fname = 'input.dat'
   end if
@@ -71,11 +82,13 @@ program proche
      rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
      ktel = itel
      
-     ! calculate inner lagrangian point, start with estimate
+     ! Calculate inner Lagrangian point, start with estimate:
      q = rm1(ktel)/rm2(ktel)
      q11 = 1./(1.+q)
      x = 0.5+0.2222222*alog10(q)
-1    fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
+     
+1    continue
+     fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
      dfx = -2.*q/x**3-2./(1.-x)**3-(1.+q)
      dx = -fx/dfx/x
      x = x*(1.+dx)
@@ -88,7 +101,7 @@ program proche
         hei(ktel) = (1.-x)*rsep(ktel)
      end if
      
-     ! calculate left limit of lobe (before shift)
+     ! Calculate left limit of lobe (before shift)
      const = q/x+1./(1.-x)+0.5*(1.+q)*(x-q11)**2
      x1 = 1.5-0.5*x
      x2 = 2.0-x
@@ -99,7 +112,7 @@ program proche
      rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)
      write(6,*)'Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
      
-     ! calculate limits after enlarging and shift, and keep track of maxima
+     ! Calculate limits after enlarging and shift, and keep track of maxima
      asep = rsep(ktel)
      xshift = -asep*rm2(ktel)/(rm1(ktel)+rm2(ktel))
      xleft = asep*rlef(ktel)+xshift
@@ -110,8 +123,9 @@ program proche
   
   
 2 continue
-  ! after all limits have been sampled, now calculate plot limits
+  ! After all limits have been sampled, now calculate plot limits
   ! silly: if bar falls off plot, increase ysize
+  
   xmargin = 0.2*(xmax-xmin)
   ysize = 0.
   do i=1,ktel      
@@ -123,7 +137,7 @@ program proche
   xrigh = xmax + xmargin*4.
   write(6,*)'Plot limits: ',xleft,xrigh,ysize
   
-  read(10,*)iscr
+  read(10,*) iscr
   if(iscr.eq.0) then
      write(6,*)'Plot written to rochelobes.eps'
      call pgbegin(0,'rochelobes.eps/ps',1,1)
@@ -132,6 +146,7 @@ program proche
   else
      call pgbegin(1,'/xs',1,1)
   end if
+  
   if(iscr.eq.1.or.iscr.eq.2) then     ! Create a white background; swap black (ci=0) and white (ci=1)
      call pgsci(0)
      call pgscr(0,1.,1.,1.)
@@ -146,8 +161,8 @@ program proche
   
   
   call pgenv(xleft,xrigh,ysize,0., 1, iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
-  call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
-  call pgscr(1,0.,0.,0.)
+  !call pgscr(0,1.,1.,1.)            ! Repeat this, to make it work for AquaTerm, for which it was designed
+  !call pgscr(1,0.,0.,0.)
   call pgsci(0)
   call pgrect(xleft-10*abs(xleft-xrigh),xrigh+10*abs(xleft-xrigh),10*ysize,-10*ysize)
   call pgsci(1)
@@ -264,7 +279,7 @@ program proche
         call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
      end if
      
-     ! Plot Roche lobe after star
+     ! Plot Roche lobe after star:
      call pgline(npl,xpl,ypl)
      call pgline(npl,xpl,ypl2)
      
@@ -299,21 +314,18 @@ program proche
      call pgline(nl+2,xpl,ypl)
      call pgline(nl+2,xpl,ypl2)
      
-     ! and write labels
+     ! and write labels:
      if(klabel.eq.3) then
-        write(label(1),102) rm1(itel)
-        write(label(2),102) rm2(itel)
+        write(label(1),'(F7.3)') rm1(itel)
+        write(label(2),'(F7.3)') rm2(itel)
      else
-        write(label(1),103) rm1(itel)
-        write(label(2),103) rm2(itel)
-        write(label(4),102) rmc(itel)
-        write(label(5),105) trim(txt(itel))
+        write(label(1),'(F5.2)') rm1(itel)
+        write(label(2),'(F5.2)') rm2(itel)
+        write(label(4),'(F7.3)') rmc(itel)
+        write(label(5),'(A)') trim(txt(itel))
      end if
-     write(label(3),104) pb(itel)
-102  format(f7.3)
-103  format(f5.2)
-104  format(f7.2)
-105  format(a)
+     write(label(3),'(F7.2)') pb(itel)
+     
      do k=1,klabel
         if(k.eq.5) then
            call pgptxt(xtl(k),yshift,0.,0.0,label(k))
@@ -321,14 +333,15 @@ program proche
            call pgptxt(xtl(k),yshift,0.,0.5,label(k))
         endif
      end do
-     !         call pgtext(xaa,yshift,yaa(itel))
+     
+     ! call pgtext(xaa,yshift,yaa(itel))
   end do
   
   
   
   
   
-  ! plot size bar
+  ! Plot scale bar:
   xlen = ilen*1.
   xpl(2) = xlen/2.
   xpl(1) = -xpl(2)
@@ -364,13 +377,18 @@ program proche
   !        call pgtext(xt,yt,text)
   !        goto 123
   !      end if
-  read(10,*)xt
-  read(10,*)yt
-  read(10,99)text
+  
+  read(10,*)  xt
+  read(10,*)  yt
+  read(10,99) text
+  
   if(xt.ne.0.) call pgtext(xt,yt,text)
+  
 99 format(a)
   call pgend
+  
 end program proche
+!***********************************************************************************************************************************
 
 
 
@@ -382,67 +400,120 @@ end program proche
 
 
 
-subroutine rlimit(x,f,df)
-  ! calculates outer limit of roche-lobe
-  common/roche/ q,q11,const,const2,xsq,onexsq
-  r1=abs(x)
-  r2=abs(1.-x)
-  r3=abs(x-q11)
-  f=q/r1+1./r2+0.5*(1.+q)*r3**2-const
-  df=-q*x/r1**3+(1.-x)/r2**3+(1.+q)*(x-q11)
+!***********************************************************************************************************************************
+!> \brief  Calculates outer limit of roche-lobe
+
+subroutine rlimit(x, f,df)
+  implicit none
+  real, intent(in) :: x
+  real, intent(out) :: f,df
+  
+  real :: q,q11,const,const2,xsq,onexsq, r1,r2,r3
+  common /roche/ q,q11,const,const2,xsq,onexsq
+  
+  r1 = abs(x)
+  r2 = abs(1.-x)
+  r3 = abs(x-q11)
+  
+  f  = q/r1 + 1./r2 + 0.5*(1.+q)*r3**2 - const
+  df = -q*x/r1**3 + (1.-x)/r2**3 + (1.+q)*(x-q11)
+  
 end subroutine rlimit
+!***********************************************************************************************************************************
 
 
-subroutine rline(y,f,df)
-  ! calculates value of y^2 for x^2 value
-  common/roche/ q,q11,const,const2,xsq,onexsq
-  r1=sqrt(xsq+y)
-  r2=sqrt(onexsq+y)
-  f=q/r1+1./r2+const2
-  df=-0.5*q/r1**3-0.5/r2**3
+!***********************************************************************************************************************************
+!> \brief  Calculates value of y^2 for x^2 value
+
+subroutine rline(y, f,df)
+  implicit none
+  real, intent(in) :: y
+  real, intent(out) :: f,df
+  
+  real :: q,q11,const,const2,xsq,onexsq, r1,r2
+  common /roche/ q,q11,const,const2,xsq,onexsq
+  
+  r1 = sqrt(xsq+y)
+  r2 = sqrt(onexsq+y)
+  
+  f  = q/r1 + 1./r2 + const2
+  df = -0.5*q/r1**3 - 0.5/r2**3
+  
 end subroutine rline
+!***********************************************************************************************************************************
 
 
-subroutine cirkel(xc,yc,rad,n)                                   
-  dimension x(200),y(200)                                          
-  step=6.2831852/(n-1)                                             
-  do i=1,n                                                       
-     phi=i*step                                                       
-     x(i)=xc+rad*cos(phi)                                             
-     y(i)=yc+rad*sin(phi)                                             
+!***********************************************************************************************************************************
+!> \brief  Draw a circle
+!!
+!! \todo  Replace by pgcirc()?  -  Perhaps this looks nicer?
+
+subroutine cirkel(xc,yc,rad,n)
+  implicit none
+  real, intent(in) :: xc,yc,rad
+  integer, intent(in) :: n
+  
+  integer :: i
+  real :: x(200),y(200), step,phi
+  
+  step = 6.2831852/(n-1)
+  
+  do i=1,n
+     phi  = i*step
+     x(i) = xc + rad*cos(phi)
+     y(i) = yc + rad*sin(phi)
   end do
+  
   call pgpoly(n,x,y)
+  
 end subroutine cirkel
+!***********************************************************************************************************************************
 
 
-subroutine disk(xc,yc,rad,rlen)                                 
-  ! draws disk centered on xc,yc between rad and rlen
-  real x(5),y(5)                                                  
-  x(1)=xc+rad
-  x(2)=x(1)                                                        
-  x(3)=xc+rlen                                                     
-  x(4)=x(3)                                                        
-  x(5)=x(1)                                                        
-  y(1)=yc+0.15*rad
-  y(2)=yc-0.15*rad                                                
-  y(3)=yc-0.15*rlen                                                     
-  y(4)=yc+0.15*rlen                                                
-  y(5)=y(1)                                                        
-  call pgpoly(5,x,y)                                            
-  x(1)=xc-rad
-  x(2)=x(1)                                                        
-  x(3)=xc-rlen                                                     
-  x(4)=x(3)                                                        
-  x(5)=x(1)                                                        
-  y(5)=y(1)                                                        
-  call pgpoly(5,x,y)                                            
+!***********************************************************************************************************************************
+!> \brief  Draws disc centered on xc,yc between rad and rlen
+
+subroutine disk(xc,yc, rad,rlen)
+  implicit none
+  
+  real, intent(in) :: xc,yc,rad,rlen
+  real :: x(5),y(5)
+  
+  x(1) = xc+rad
+  x(2) = x(1)
+  x(3) = xc+rlen
+  x(4) = x(3)
+  x(5) = x(1)
+  y(1) = yc+0.15*rad
+  y(2) = yc-0.15*rad
+  y(3) = yc-0.15*rlen
+  y(4) = yc+0.15*rlen
+  y(5) = y(1)
+  call pgpoly(5,x,y)
+  
+  x(1) = xc-rad
+  x(2) = x(1)
+  x(3) = xc-rlen
+  x(4) = x(3)
+  x(5) = x(1)
+  y(5) = y(1)
+  call pgpoly(5,x,y)
+
 end subroutine disk
+!***********************************************************************************************************************************
 
 
+
+!***********************************************************************************************************************************
+!> \see Numerical recipes, p.258
 
 function rtsafe(funcd,x1,x2,xacc)
-  ! numerical recipes, p.258
-  parameter(maxit=100)
+  implicit none
+  integer, parameter :: maxit=100
+  integer :: j
+  real :: rtsafe, x1,x2,xacc,dx,dxold,xh,xl, f,df,fh,fl, swap,temp
+  
+  
   call funcd(x1,fl,df)
   call funcd(x2,fh,df)
   if(fl*fh.ge.0.) write(0,'(A)') 'root must be bracketed'
@@ -456,34 +527,39 @@ function rtsafe(funcd,x1,x2,xacc)
      fl=fh
      fh=swap
   end if
-  rtsafe=0.5*(x1+x2)
-  dxold=abs(x2-x1)
-  dx=dxold
+  
+  rtsafe = 0.5*(x1+x2)
+  dxold  = abs(x2-x1)
+  dx     = dxold
+  
   call funcd(rtsafe,f,df)
+  
   do j=1,maxit
-     if(((rtsafe-xh)*df-f)*((rtsafe-xl)*df-f).ge.0..or. abs(2.*f).gt.abs(dxold*df) ) then
-        dxold=dx
-        dx=0.5*(xh-xl)
-        rtsafe=xl+dx
+     if(((rtsafe-xh)*df-f)*((rtsafe-xl)*df-f).ge.0. .or. abs(2.*f).gt.abs(dxold*df) ) then
+        dxold = dx
+        dx = 0.5*(xh-xl)
+        rtsafe = xl+dx
         if(xl.eq.rtsafe) return
      else
-        dxold=dx
-        dx=f/df
-        temp=rtsafe
-        rtsafe=rtsafe-dx
+        dxold = dx
+        dx = f/df
+        temp = rtsafe
+        rtsafe = rtsafe-dx
         if(temp.eq.rtsafe) return
      end if
      if(abs(dx).lt.xacc) return
      call funcd(rtsafe,f,df)
      if(f.lt.0.)then
-        xl=rtsafe
-        fl=f
+        xl = rtsafe
+        fl = f
      else
-        xh=rtsafe
-        fh=f
+        xh = rtsafe
+        fh = f
      end if
   end do
   
-  write(0,'(A)')' rtsafe exceeds maximum iterations'
+  write(0,'(A)')' rtsafe() exceeded maximum number of iterations'
   
 end function rtsafe
+!***********************************************************************************************************************************
+
