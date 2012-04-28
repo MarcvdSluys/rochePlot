@@ -26,7 +26,7 @@ program rocheplot
   integer :: nev, i,iaxis,ilen,iscr,itel,k,kl,klabel,ktel,nl
   
   real :: rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(5)
-  real :: pb(ng), rmc(ng)
+  real :: pb(ng), age_mc(ng)
   real :: asep, q,q11,const,const2,xsq,onexsq, csep,dfx,dx,dxl,dxr,fx, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
   real :: x,x1,x2,xacc,xl,xleft,xlen,xm1,xm2,xmargin,xmax,xmin,xmult,xrigh,xright,xshift,xt
   real :: y1,y2,ymargin,yshift,ysize,ysq,yt
@@ -80,7 +80,7 @@ program rocheplot
      if(klabel.eq.3) then
         read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel)
      else
-        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),rmc(itel), txt(itel)
+        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),age_mc(itel), txt(itel)
      end if
      
      rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
@@ -164,9 +164,7 @@ program rocheplot
   
   
   
-  call pgenv(xleft,xrigh,ysize,0., 1, iaxis) !iaxis: 0 for test, -2 for real (do or do not plot frame...?) 
-  !call pgsci(0)
-  !call pgrect(xleft-10*abs(xleft-xrigh),xrigh+10*abs(xleft-xrigh),10*ysize,-10*ysize)
+  call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
   call pgsci(1)
   
   read(10,*) ilen  ! Length of the scale bar
@@ -179,13 +177,13 @@ program rocheplot
   
   read(10,'(A50)') label(4)
   do kl=1,klabel
-     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,label(kl))
+     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
   end do
   
   read(10,'(A50)') title
   if(title(1:10).ne.'          ') then
      call pgsch(1.5)
-     call pgptxt(0.,-3*ymargin,0.,0.5,title)
+     call pgptxt(0.,-3*ymargin,0.,0.5,trim(title))
      call pgsch(1.)
   end if
   
@@ -219,7 +217,6 @@ program rocheplot
      end do
      xpl(nl+1) = x
      ypl(nl+1) = 0.
-     ! write(6,*)'left lobe done'
      
      
      ! Compute right lobe:
@@ -235,7 +232,6 @@ program rocheplot
         xpl(nl+i) = xl
         ypl(nl+i) = sqrt(ysq)
      end do
-     ! write(6,*)'right lobe done'
      
      
      ! Enlarge and shift lobes:
@@ -272,7 +268,7 @@ program rocheplot
         call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
      end if
      
-     ! Plot left Roche lobe after star:
+     ! Plot left Roche lobe:
      call pgline(npl,xpl,ypl)
      call pgline(npl,xpl,ypl2)
      
@@ -286,8 +282,8 @@ program rocheplot
            ypl2(i) = ypl2(i+nl)
         end do
         call pgsci(15)
-        call pgpoly(nl+2,xpl,ypl)
-        call pgpoly(nl+2,xpl,ypl2)
+        call pgpoly(nl+2, xpl, ypl)   ! Bottom half
+        call pgpoly(nl+2, xpl, ypl2)  ! Top half
         call pgsci(1)
      else
         rad = rad2(itel)
@@ -314,16 +310,17 @@ program rocheplot
      else
         write(label(1),'(F5.2)') rm1(itel)
         write(label(2),'(F5.2)') rm2(itel)
-        write(label(4),'(F7.3)') rmc(itel)
+        !write(label(4),'(F7.3)') age_mc(itel)
+        write(label(4),'(I3)') nint(age_mc(itel))
         write(label(5),'(A)') trim(txt(itel))
      end if
      write(label(3),'(F7.2)') pb(itel)
      
      do k=1,klabel
         if(k.eq.5) then
-           call pgptxt(xtl(k),yshift,0.,0.0,label(k))  ! Align left
+           call pgptxt(xtl(k),yshift,0.,0.0,trim(label(k)))  ! Align left
         else
-           call pgptxt(xtl(k),yshift,0.,0.5,label(k))  ! Align centre
+           call pgptxt(xtl(k),yshift,0.,0.5,trim(label(k)))  ! Align centre
         endif
      end do
      
