@@ -31,12 +31,16 @@ program rocheplot
   real :: x,x1,x2,xacc,xl,xleft,xlen,xm1,xm2,xmargin,xmax,xmin,xmult,xrigh,xright,xshift,xt
   real :: y1,y2,ymargin,yshift,ysize,ysq,yt
   
-  integer :: command_argument_count
+  integer :: command_argument_count, lw
   character :: txt(ng)*50, text*50,label(5)*50,bla,title*50,fname*50  !,yaa(8)
+  logical :: use_colour
   
   external rlimit,rline
   
   common /roche/ q,q11,const,const2,xsq,onexsq
+  
+  use_colour = .false.
+  use_colour = .true.
   
   ! Column headers:
   data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', &
@@ -77,11 +81,17 @@ program rocheplot
   read(10,*) bla
   
   do itel=1,nev
-     if(klabel.eq.3) then
+     select case(klabel)
+     case(3)
         read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel)
-     else
+     case(4)
+        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),age_mc(itel)
+     case(5)
         read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),age_mc(itel), txt(itel)
-     end if
+     case default
+        write(0,'(A,I3,A)') ' klabel =',klabel,' not supported, change the value in your input file.'
+        stop
+     end select
      
      rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
      ktel = itel
@@ -144,12 +154,18 @@ program rocheplot
   read(10,*) iscr
   if(iscr.eq.0) then
      write(6,*)'Plot written to rochelobes.eps'
-     call pgbegin(0,'rochelobes.eps/ps',1,1)
-     call pgslw(2)
+     if(use_colour) then
+        call pgbegin(0,'rochelobes.eps/cps',1,1)
+     else
+        call pgbegin(0,'rochelobes.eps/ps',1,1)
+     end if
+     lw = 2
      call pgscf(1)
   else
      call pgbegin(1,'/xs',1,1)
+     lw = 1
   end if
+  call pgslw(lw)
   
   if(iscr.eq.1.or.iscr.eq.2) then     ! Create a white background; swap black (ci=0) and white (ci=1)
      call pgsci(0)
@@ -169,23 +185,29 @@ program rocheplot
   
   read(10,*) ilen  ! Length of the scale bar
   
-  read(10,*) xtl(1)
-  read(10,*) xtl(2)
-  read(10,*) xtl(3)
-  read(10,*) xtl(4)
-  read(10,*) xtl(5)
+  
+  ! Read and print column headers:
+  do kl=1,klabel
+     read(10,*) xtl(kl)
+  end do
   
   read(10,'(A50)') label(4)
+  call pgslw(2*lw)
   do kl=1,klabel
      if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
   end do
   
+  
+  ! Read and print plot title:
   read(10,'(A50)') title
   if(title(1:10).ne.'          ') then
      call pgsch(1.5)
+     call pgslw(3*lw)
      call pgptxt(0.,-3*ymargin,0.,0.5,trim(title))
      call pgsch(1.)
   end if
+  call pgslw(lw)
+  
   
   do itel=1,ktel
      xm1 = rm1(itel)
@@ -253,6 +275,7 @@ program rocheplot
      ! Left star:
      if(rad1(itel).gt.1.e5) then  ! Rl filling
         call pgsci(15)
+        if(use_colour) call pgsci(2)  ! red
         call pgpoly(nl+1,xpl,ypl)
         call pgpoly(nl+1,xpl,ypl2)
         call pgsci(1)
@@ -262,6 +285,7 @@ program rocheplot
         if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
            radd = 0.7*asep*x
            call pgsci(15)
+           if(use_colour) call pgsci(5)  ! light blue
            call plot_disc(xshift,yshift,rad,radd)
            call pgsci(1)
         end if
@@ -282,6 +306,7 @@ program rocheplot
            ypl2(i) = ypl2(i+nl)
         end do
         call pgsci(15)
+        if(use_colour) call pgsci(2)  ! red
         call pgpoly(nl+2, xpl, ypl)   ! Bottom half
         call pgpoly(nl+2, xpl, ypl2)  ! Top half
         call pgsci(1)
@@ -290,6 +315,7 @@ program rocheplot
         if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
            radd = 0.7*asep*(1.-x)
            call pgsci(15)
+           if(use_colour) call pgsci(5)  ! light blue
            call plot_disc(xshift+asep,yshift,rad,radd)
            call pgsci(1)
         end if
@@ -310,9 +336,14 @@ program rocheplot
      else
         write(label(1),'(F5.2)') rm1(itel)
         write(label(2),'(F5.2)') rm2(itel)
-        !write(label(4),'(F7.3)') age_mc(itel)
-        write(label(4),'(I3)') nint(age_mc(itel))
-        write(label(5),'(A)') trim(txt(itel))
+        if(maxval(age_mc(1:ktel)).lt.2.) then
+           write(label(4),'(F7.3)') age_mc(itel)
+        else if(maxval(age_mc(1:ktel)).lt.50.) then
+           write(label(4),'(F6.2)') age_mc(itel)
+        else
+           write(label(4),'(I3)') nint(age_mc(itel))
+        end if
+        if(klabel.ge.5) write(label(5),'(A)') trim(txt(itel))
      end if
      write(label(3),'(F7.2)') pb(itel)
      
@@ -325,7 +356,7 @@ program rocheplot
      end do
      
      ! call pgtext(xaa,yshift,yaa(itel))
-  end do
+  end do  ! do itel = 1,ktel
   
   
   
