@@ -2,6 +2,26 @@
 
 
 !***********************************************************************************************************************************
+!> \brief  Contains data from the input file and derived data
+
+module input_data
+  implicit none
+  
+  integer, parameter :: npl=100, ng=10
+  integer :: klabel, ktel, nev
+  
+  real :: csep, rm1(ng),rm2(ng),pb(ng),rad1(ng),rad2(ng), age_mc(ng)
+  real :: rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng)
+  real :: xmin,xmax
+  
+  character :: txt(ng)*(50)
+  
+end module input_data
+!***********************************************************************************************************************************
+
+
+
+!***********************************************************************************************************************************
 !> \brief  Plots Roche lobes for given binaries
 
 program rocheplot
@@ -19,23 +39,22 @@ program rocheplot
   !
   ! next, the individual graphs are made
   
+  use input_data
   
   implicit none
   
-  integer, parameter :: npl=100, ng=10
-  integer :: nev, i,iaxis,blen,iscr,itel,k,kl,klabel,ktel,nl
+  integer :: i,iaxis,blen,iscr,itel,k,kl,nl
   
-  real :: rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(5)
-  real :: pb(ng), age_mc(ng)
-  real :: asep, q,q11,const,const2,xsq,onexsq, csep,dfx,dx,dxl,dxr,fx, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
-  real :: x,x1,x2,xacc,xl,xleft,xlen,xm1,xm2,xmargin,xmax,xmin,xmult,xrigh,xright,xshift,xt
+  real :: xpl(npl),ypl(npl),ypl2(npl),xtl(5)
+  real :: asep, q,q11,const,const2,xsq,onexsq, dxl,dxr, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
+  real :: x,xacc,xl,xleft,xlen,xm1,xm2,xmargin,xmult,xrigh,xshift,xt
   real :: y1,y2,ymargin,yshift,ysize,ysq,yt
   
   integer :: command_argument_count, lw
-  character :: txt(ng)*(50), text*(50),label(5)*(50),bla,title*(50),inputfile*(50),outputfile*(50)  !,yaa(8)
+  character :: text*(50),label(5)*(50),bla,title*(50),inputfile*(50),outputfile*(50)  !,yaa(8)
   logical :: use_colour
   
-  external rlimit,rline
+  external rlimit, rline
   
   common /roche/ q,q11,const,const2,xsq,onexsq
   
@@ -62,10 +81,6 @@ program rocheplot
   !  to enable calculation of the overall size of the graph.
   iaxis=-2  ! Draft: 0,  quality: -2
   
-  xmin =  huge(xmin)
-  xmax = -huge(xmax)
-  
-  
   ! Read command-line variables:
   inputfile = 'input.dat'
   outputfile = 'rochelobes.eps'
@@ -86,71 +101,9 @@ program rocheplot
   read(10,*) bla
   bla = bla  ! Remove 'unused' compiler warnings
   
-  do itel=1,nev
-     select case(klabel)
-     case(3)
-        read(10,*,end=2) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel)
-     case(4)
-        read(10,*,end=2) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel)
-     case(5)
-        read(10,*,end=2) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
-     case default
-        write(0,'(A,I3,A)') ' klabel =',klabel,' not supported, change the value in your input file.'
-        stop
-     end select
-     
-     rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
-     ktel = itel
-     
-     ! Calculate inner Lagrangian point, start with estimate:
-     q = rm1(ktel)/rm2(ktel)
-     q11 = 1./(1.+q)
-     x = 0.5 + 0.2222222*log10(q)
-     
-     dx = huge(dx)
-     do while(abs(dx).gt.1.e-6)
-        fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
-        dfx = -2.*q/x**3-2./(1.-x)**3-(1.+q)
-        dx = -fx/dfx/x
-        x = x*(1.+dx)
-     end do
-     
-     rlag(ktel) = x
-     
-     
-     ! Set vertical space for graph equal to max(x,1-x):
-     if(q.gt.1.) then
-        hei(ktel) = x*rsep(ktel)
-     else
-        hei(ktel) = (1.-x)*rsep(ktel)
-     end if
-     
-     
-     ! Calculate left limit of lobe (before shift):
-     const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
-     x1 = 1.5 - 0.5*x
-     x2 = 2.0 - x
-     xacc = 1.e-4
-     rrig(ktel) = rtsafe(rlimit,x1,x2,xacc)
-     x1 = -0.5*x
-     x2 = -x
-     rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)
-     write(*,*) 'Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
-     
-     
-     ! Calculate limits after enlarging and shift, and keep track of maxima:
-     asep = rsep(ktel)
-     xshift = -asep*rm2(ktel) / (rm1(ktel)+rm2(ktel))
-     
-     xleft = asep*rlef(ktel) + xshift
-     xmin = min(xmin,xleft)
-     
-     xright = asep*rrig(ktel) + xshift
-     xmax = max(xmax,xright)
-  end do
+  ! Read the lines of the input file containting evolutionary states:
+  call read_input_evolutionary_states()
   
-  
-2 continue
   ! After all limits have been sampled, now calculate plot limits
   ! silly: if bar falls off plot, increase ysize
   
@@ -181,7 +134,8 @@ program rocheplot
   end if
   call pgslw(lw)
   
-  if(iscr.eq.1.or.iscr.eq.2) then     ! Create a white background; swap black (ci=0) and white (ci=1)
+  ! Create a white background when plotting to screen; swap black (ci=0) and white (ci=1)
+  if(iscr.eq.1.or.iscr.eq.2) then
      call pgsci(0)
      call pgscr(0,1.,1.,1.)
      call pgscr(1,0.,0.,0.)
@@ -240,6 +194,7 @@ program rocheplot
      ! Compute left lobe:
      nl = npl/2-1
      dxl = (x-xpl(1))/real(nl)
+     xacc = 1.e-4
      do i = 2,nl
         xl = xpl(1) + real(i-1)*dxl
         xsq = xl*xl
@@ -564,7 +519,7 @@ function rtsafe(funcd, x1,x2, xacc)
   
   call funcd(x1,fl,df)
   call funcd(x2,fh,df)
-  if(fl*fh.ge.0.) write(0,'(A)') 'root must be bracketed'
+  if(fl*fh.ge.0.) write(0,'(A)') ' rtsafe(): root must be bracketed'
   if(fl.lt.0.) then
      xl=x1
      xh=x2
@@ -611,3 +566,98 @@ function rtsafe(funcd, x1,x2, xacc)
 end function rtsafe
 !***********************************************************************************************************************************
 
+
+
+!***********************************************************************************************************************************
+!> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
+
+subroutine read_input_evolutionary_states()
+  use input_data
+  
+  implicit none
+  
+  integer :: io
+  
+  integer :: itel
+  
+  real :: asep, q,q11,const, dfx,dx,fx, rtsafe, const2,onexsq,xsq
+  real :: x,x1,x2,xacc,xleft,xright,xshift
+  
+  common /roche/ q,q11,const,const2,xsq,onexsq
+  
+  external :: rlimit
+  
+  
+  xmin =  huge(xmin)
+  xmax = -huge(xmax)
+  
+  do itel=1,nev
+     select case(klabel)
+     case(3)
+        read(10,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel)
+     case(4)
+        read(10,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel)
+     case(5)
+        read(10,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
+     case default
+        write(0,'(A,I3,A)') ' klabel =',klabel,' not supported, change the value in your input file.'
+        stop
+     end select
+     
+     if(io.lt.0) return  ! end of file
+     
+     rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
+     ktel = itel
+     
+     
+     ! Calculate inner Lagrangian point, start with estimate:
+     q = rm1(ktel)/rm2(ktel)
+     q11 = 1./(1.+q)
+     x = 0.5 + 0.2222222*log10(q)
+     
+     dx = huge(dx)
+     do while(abs(dx).gt.1.e-6)
+        fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
+        dfx = -2.*q/x**3-2./(1.-x)**3-(1.+q)
+        dx = -fx/dfx/x
+        x = x*(1.+dx)
+     end do
+     
+     rlag(ktel) = x
+     
+     
+     ! Set vertical space for graph equal to max(x,1-x):
+     if(q.gt.1.) then
+        hei(ktel) = x*rsep(ktel)
+     else
+        hei(ktel) = (1.-x)*rsep(ktel)
+     end if
+     
+     
+     ! Calculate left limit of lobe (before shift):
+     const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+     x1 = 1.5 - 0.5*x
+     x2 = 2.0 - x
+     xacc = 1.e-4
+     rrig(ktel) = rtsafe(rlimit,x1,x2,xacc)
+     
+     x1 = -0.5*x
+     x2 = -x
+     rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)
+     
+     write(*,'(A,4G12.3)') ' Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
+     
+     
+     ! Calculate limits after enlarging and shift, and keep track of minima and maxima:
+     asep = rsep(ktel)
+     xshift = -asep*rm2(ktel) / (rm1(ktel)+rm2(ktel))
+     
+     xleft = asep*rlef(ktel) + xshift
+     xmin = min(xmin,xleft)
+     
+     xright = asep*rrig(ktel) + xshift
+     xmax = max(xmax,xright)
+  end do
+  
+end subroutine read_input_evolutionary_states
+!***********************************************************************************************************************************
