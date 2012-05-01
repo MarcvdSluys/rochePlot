@@ -62,8 +62,8 @@ program rocheplot
   !  to enable calculation of the overall size of the graph.
   iaxis=-2  ! Draft: 0,  quality: -2
   
-  xmin = 0.
-  xmax = 0.
+  xmin =  huge(xmin)
+  xmax = -huge(xmax)
   
   
   ! Read command-line variables:
@@ -79,8 +79,8 @@ program rocheplot
   write(*,'(A)') ' Reading input file '//trim(inputfile)
   open(unit=10,form='formatted',status='old',file=trim(inputfile))
   
-  read(10,*) klabel
-  read(10,*) nev
+  read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
+  read(10,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
   if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
   
   read(10,*) bla
@@ -89,11 +89,11 @@ program rocheplot
   do itel=1,nev
      select case(klabel)
      case(3)
-        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel)
+        read(10,*,end=2) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel)
      case(4)
-        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),age_mc(itel)
+        read(10,*,end=2) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel)
      case(5)
-        read(10,*,end=2) rm1(itel),rm2(itel),pb(itel),rad1(itel),rad2(itel),age_mc(itel), txt(itel)
+        read(10,*,end=2) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
      case default
         write(0,'(A,I3,A)') ' klabel =',klabel,' not supported, change the value in your input file.'
         stop
@@ -105,23 +105,28 @@ program rocheplot
      ! Calculate inner Lagrangian point, start with estimate:
      q = rm1(ktel)/rm2(ktel)
      q11 = 1./(1.+q)
-     x = 0.5+0.2222222*log10(q)
+     x = 0.5 + 0.2222222*log10(q)
      
-1    continue
-     fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
-     dfx = -2.*q/x**3-2./(1.-x)**3-(1.+q)
-     dx = -fx/dfx/x
-     x = x*(1.+dx)
-     if(abs(dx).gt.1.e-6) goto 1
+     dx = huge(dx)
+     do while(abs(dx).gt.1.e-6)
+        fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
+        dfx = -2.*q/x**3-2./(1.-x)**3-(1.+q)
+        dx = -fx/dfx/x
+        x = x*(1.+dx)
+     end do
+     
      rlag(ktel) = x
-     ! set vertical space for graph equal to max(x,1-x)
-     if(q.gt.1.)then
+     
+     
+     ! Set vertical space for graph equal to max(x,1-x):
+     if(q.gt.1.) then
         hei(ktel) = x*rsep(ktel)
      else
         hei(ktel) = (1.-x)*rsep(ktel)
      end if
      
-     ! Calculate left limit of lobe (before shift)
+     
+     ! Calculate left limit of lobe (before shift):
      const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
      x1 = 1.5 - 0.5*x
      x2 = 2.0 - x
@@ -132,13 +137,16 @@ program rocheplot
      rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)
      write(*,*) 'Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
      
-     ! Calculate limits after enlarging and shift, and keep track of maxima
+     
+     ! Calculate limits after enlarging and shift, and keep track of maxima:
      asep = rsep(ktel)
-     xshift = -asep*rm2(ktel)/(rm1(ktel)+rm2(ktel))
-     xleft = asep*rlef(ktel)+xshift
-     if(xleft.lt.xmin) xmin = xleft
-     xright = asep*rrig(ktel)+xshift
-     if(xright.gt.xmax) xmax = xright
+     xshift = -asep*rm2(ktel) / (rm1(ktel)+rm2(ktel))
+     
+     xleft = asep*rlef(ktel) + xshift
+     xmin = min(xmin,xleft)
+     
+     xright = asep*rrig(ktel) + xshift
+     xmax = max(xmax,xright)
   end do
   
   
@@ -409,6 +417,7 @@ program rocheplot
   read(10,*) xt
   read(10,*) yt
   read(10,'(A)') text
+  close(10)
   
   if(xt.ne.0.) call pgtext(xt,yt,text)
   
@@ -556,7 +565,7 @@ function rtsafe(funcd, x1,x2, xacc)
   call funcd(x1,fl,df)
   call funcd(x2,fh,df)
   if(fl*fh.ge.0.) write(0,'(A)') 'root must be bracketed'
-  if(fl.lt.0.)then
+  if(fl.lt.0.) then
      xl=x1
      xh=x2
   else
@@ -588,7 +597,7 @@ function rtsafe(funcd, x1,x2, xacc)
      end if
      if(abs(dx).lt.xacc) return
      call funcd(rtsafe,f,df)
-     if(f.lt.0.)then
+     if(f.lt.0.) then
         xl = rtsafe
         fl = f
      else
