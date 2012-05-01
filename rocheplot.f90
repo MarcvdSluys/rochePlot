@@ -36,6 +36,19 @@ end module plot_settings
 
 
 !***********************************************************************************************************************************
+!> \brief  Contains Roche-lobe data
+
+module roche
+  implicit none
+  
+  real :: q,q11, const,const2, xsq,onexsq
+  
+end module roche
+!***********************************************************************************************************************************
+
+
+
+!***********************************************************************************************************************************
 !> \brief  Plots Roche lobes for given binaries
 
 program rocheplot
@@ -55,13 +68,14 @@ program rocheplot
   
   use input_data
   use plot_settings
+  use roche
   
   implicit none
   
   integer :: i,iaxis,itel,k,kl,nl
   
   real :: xpl(npl),ypl(npl),ypl2(npl)
-  real :: asep, q,q11,const,const2,xsq,onexsq, dxl,dxr, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
+  real :: asep, dxl,dxr, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
   real :: x,xacc,xl,xlen,xm1,xm2, xmult,xshift
   real :: y1,y2,yshift,ysq
   
@@ -70,8 +84,6 @@ program rocheplot
   logical :: use_colour
   
   external rlimit, rline
-  
-  common /roche/ q,q11,const,const2,xsq,onexsq
   
   use_colour = .false.
   use_colour = .true.
@@ -369,12 +381,13 @@ end program rocheplot
 !> \brief  Calculates outer limit of Roche lobe
 
 subroutine rlimit(x, f,df)
+  use roche, only: q,q11, const
+  
   implicit none
   real, intent(in) :: x
   real, intent(out) :: f,df
   
-  real :: q,q11,const,const2,xsq,onexsq, r1,r2,r3
-  common /roche/ q,q11,const,const2,xsq,onexsq
+  real :: r1,r2,r3
   
   r1 = abs(x)
   r2 = abs(1.-x)
@@ -391,12 +404,12 @@ end subroutine rlimit
 !> \brief  Calculates value of y^2 for x^2 value
 
 subroutine rline(y, f,df)
+  use roche, only: q, const2, xsq,onexsq
   implicit none
   real, intent(in) :: y
   real, intent(out) :: f,df
   
-  real :: q,q11,const,const2,xsq,onexsq, r1,r2
-  common /roche/ q,q11,const,const2,xsq,onexsq
+  real :: r1,r2
   
   r1 = sqrt(xsq+y)
   r2 = sqrt(onexsq+y)
@@ -548,18 +561,15 @@ end function rtsafe
 subroutine read_input_file(inputfile)
   use input_data
   use plot_settings
+  use roche, only: q,q11, const
   
   implicit none
-  
   character, intent(in) :: inputfile*(*)
   
   integer :: io, itel, ki, nev
-  real :: asep, q,q11,const, dfx,dx,fx, rtsafe, const2,onexsq,xsq
-  real :: x,x1,x2,xacc,xright,xshift
-  real :: xmargin, xmin,xmax
+  real :: asep, dfx,dx,fx, rtsafe
+  real :: x,x1,x2,xacc,xright,xshift, xmargin, xmin,xmax
   character :: tmpstr
-  
-  common /roche/ q,q11,const,const2,xsq,onexsq
   
   external :: rlimit
   
