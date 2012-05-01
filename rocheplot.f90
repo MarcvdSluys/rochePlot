@@ -7,7 +7,8 @@
 module input_data
   implicit none
   
-  integer, parameter :: npl=100, ng=10
+  integer, parameter :: npl=100  ! Number of plotting points
+  integer, parameter :: ng=10    ! Maximum number of binaries that can be plotted
   integer :: klabel, ktel
   integer :: blen, iscr
   
@@ -143,8 +144,6 @@ program rocheplot
   call pgsfs(1)
   call pgslw(lw)
   
-  
-  
   call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
   call pgsci(1)
   
@@ -166,6 +165,7 @@ program rocheplot
   call pgslw(lw)
   
   
+  ! Plot the different binaries:
   do itel=1,ktel
      call plot_binary(itel)  ! Plot each binary; Roche lobes, stars and labels
   end do  ! do itel = 1,ktel
@@ -186,7 +186,7 @@ program rocheplot
   
   
   write(text,'(I5,"R\d\(2281)")') blen
-  !      call pgtext(xpl(2),ypl(2),text)
+  !call pgtext(xpl(2),ypl(2),text)
   call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
   
   
@@ -194,8 +194,9 @@ program rocheplot
   xpl(1) = 0.
   xpl(2) = 0.
   ypl(1) = 0.
-  !      ypl(2) = yshift+ymargin
+  !ypl(2) = yshift+ymargin
   ypl(2) = yshift-ymargin
+  
   call pgsls(4)
   call pgline(2,xpl,ypl)
   call pgsls(1)
@@ -457,7 +458,7 @@ subroutine read_input_file(inputfile)
      
      if(io.lt.0) return  ! end of file
      
-     rsep(itel) = csep*((rm1(itel)+rm2(itel))*pb(itel)**2)**(1./3.)
+     rsep(itel) = csep * ((rm1(itel)+rm2(itel)) * pb(itel)**2)**(1./3.)  ! Kepler: P_orb -> a_orb
      ktel = itel
      
      
@@ -474,7 +475,7 @@ subroutine read_input_file(inputfile)
         x = x*(1.+dx)
      end do
      
-     rlag(ktel) = x
+     rlag(ktel) = x  ! Inner Lagrangian point
      
      
      ! Set vertical space for graph equal to max(x,1-x):
@@ -490,17 +491,17 @@ subroutine read_input_file(inputfile)
      x1 = 1.5 - 0.5*x
      x2 = 2.0 - x
      xacc = 1.e-4
-     rrig(ktel) = rtsafe(rlimit,x1,x2,xacc)
+     rrig(ktel) = rtsafe(rlimit,x1,x2,xacc)  ! Right limit
      
      x1 = -0.5*x
      x2 = -x
-     rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)
+     rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)  ! Left limit
      
      write(*,'(A,4G12.3)') ' Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
      
      
      ! Calculate limits after enlarging and shift, and keep track of minima and maxima:
-     asep = rsep(ktel)
+     asep   = rsep(ktel)  ! Orbital separation
      xshift = -asep*rm2(ktel) / (rm1(ktel)+rm2(ktel))
      
      xleft = asep*rlef(ktel) + xshift
@@ -588,23 +589,26 @@ subroutine plot_binary(itel)
   external :: rline
   
   
-  xm1 = rm1(itel)
-  xm2 = rm2(itel)
-  asep = rsep(itel)
-  x = rlag(itel)
-  q = xm1/xm2
-  q11 = 1./(1.+q)
-  const = q/x+1./(1.-x)+0.5*(1.+q)*(x-q11)**2
-  xpl(1) = rlef(itel)
-  xpl(npl) = rrig(itel)
-  ypl(1) = 0.
-  ypl(npl) = 0.
+  xm1 = rm1(itel)     ! M1
+  xm2 = rm2(itel)     ! M2
+  asep = rsep(itel)   ! Orbital separation
+  x = rlag(itel)      ! Inner Lagrangian point
+  q = xm1/xm2         ! q1
+  q11 = 1./(1.+q)     ! M2/Mtot
   
+  const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+  
+  xpl(1) = rlef(itel)    ! Left limit of Rl
+  xpl(npl) = rrig(itel)  ! Right limit of Rl
+  ypl(1) = 0.            
+  ypl(npl) = 0.          
+  
+  
+  nl   = npl/2-1
+  xacc = 1.e-4
   
   ! Compute left lobe:
-  nl = npl/2-1
-  dxl = (x-xpl(1))/real(nl)
-  xacc = 1.e-4
+  dxl  = (x-xpl(1))/real(nl)
   do il = 2,nl
      xl = xpl(1) + real(il-1)*dxl
      xsq = xl*xl
@@ -651,16 +655,15 @@ subroutine plot_binary(itel)
   end do
   
   
-  ! Left star:
+  ! Plot left star/disc:
   if(rad1(itel).gt.1.e5) then  ! Rl filling
      call pgsci(15)
      if(use_colour) call pgsci(2)  ! red
-     call pgpoly(nl+1,xpl,ypl)
-     call pgpoly(nl+1,xpl,ypl2)
+     call pgpoly(nl+1, xpl, ypl)
+     call pgpoly(nl+1, xpl, ypl2)
      call pgsci(1)
   else
      rad = rad1(itel)
-     !          if(rad2(itel).gt.1.e5) then
      if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
         radd = 0.7*asep*x
         call pgsci(15)
@@ -671,13 +674,14 @@ subroutine plot_binary(itel)
      call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
   end if
   
+  
   ! Plot left Roche lobe:
   call pgline(npl,xpl,ypl)
   call pgline(npl,xpl,ypl2)
   
   
   
-  ! Right star:
+  ! Plot right star/disc:
   if(rad2(itel).gt.1.e5) then  ! Rl filling
      do il=1,nl+2
         xpl(il)  = xpl(il+nl)
@@ -701,6 +705,7 @@ subroutine plot_binary(itel)
      
      call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
   end if
+  
   
   ! Plot right Roche lobe:
   call pgline(nl+2,xpl,ypl)
