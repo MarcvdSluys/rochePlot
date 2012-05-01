@@ -101,11 +101,12 @@ program rocheplot
   read(10,*) bla
   bla = bla  ! Remove 'unused' compiler warnings
   
+  
   ! Read the lines of the input file containting evolutionary states:
   call read_input_evolutionary_states()
   
-  ! After all limits have been sampled, now calculate plot limits
-  ! silly: if bar falls off plot, increase ysize
+  ! After all limits have been sampled, now calculate plot limits:
+  ! - silly: if bar falls off plot, increase ysize
   
   xmargin = 0.2*(xmax-xmin)
   ysize = 0.
@@ -116,9 +117,28 @@ program rocheplot
   ymargin = 0.02*ysize
   xleft = xmin - xmargin
   xrigh = xmax + xmargin*4.
-  write(6,*)'Plot limits: ',xleft,xrigh,ysize
+  write(6,*) 'Plot limits: ',xleft,xrigh,ysize
   
+  
+  
+  ! Read the rest of the input file:
   read(10,*) iscr
+  read(10,*) blen  ! Length of the scale bar
+  do kl=1,klabel
+     read(10,*) xtl(kl)  ! Column headers
+  end do
+  read(10,'(A50)') label(4)
+  read(10,'(A50)') title  ! Plot title
+  
+  read(10,*) xt
+  read(10,*) yt
+  read(10,'(A)') text
+  close(10)
+  
+  
+  
+  
+  ! Initialise plot output:
   if(iscr.eq.0) then
      write(6,*)'Saving plot as '//trim(outputfile)
      if(use_colour) then
@@ -132,42 +152,26 @@ program rocheplot
      call pgbegin(1,'/xs',1,1)
      lw = 1
   end if
-  call pgslw(lw)
   
-  ! Create a white background when plotting to screen; swap black (ci=0) and white (ci=1)
-  if(iscr.eq.1.or.iscr.eq.2) then
-     call pgsci(0)
-     call pgscr(0,1.,1.,1.)
-     call pgscr(1,0.,0.,0.)
-     call pgsvp(0.,1.,0.,1.)
-     call pgswin(-1.,1.,-1.,1.)
-     call pgrect(-2.,2.,-2.,2.)
-     call pgsci(1)
-  end if
+  
+  if(iscr.eq.1.or.iscr.eq.2) call pgwhitebg()  ! Create a white background when plotting to screen; swap fg/bg colours
   call pgsfs(1)
+  call pgslw(lw)
   
   
   
   call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
   call pgsci(1)
   
-  read(10,*) blen  ! Length of the scale bar
   
-  
-  ! Read and print column headers:
-  do kl=1,klabel
-     read(10,*) xtl(kl)
-  end do
-  
-  read(10,'(A50)') label(4)
+  ! Print column headers:
   call pgslw(2*lw)
   do kl=1,klabel
      if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
   end do
   
   
-  ! Read and print plot title:
-  read(10,'(A50)') title
+  ! Print plot title:
   if(title(1:10).ne.'          ') then
      call pgsch(1.5)
      call pgslw(3*lw)
@@ -368,11 +372,6 @@ program rocheplot
   !        call pgtext(xt,yt,text)
   !        goto 123
   !      end if
-  
-  read(10,*) xt
-  read(10,*) yt
-  read(10,'(A)') text
-  close(10)
   
   if(xt.ne.0.) call pgtext(xt,yt,text)
   
@@ -660,4 +659,23 @@ subroutine read_input_evolutionary_states()
   end do
   
 end subroutine read_input_evolutionary_states
+!***********************************************************************************************************************************
+
+
+  
+!***********************************************************************************************************************************
+!> \brief  Create a white background when plotting to screen; swap black (ci=0) and white (ci=1)
+
+subroutine pgwhitebg()
+  implicit none
+  
+  call pgsci(0)
+  call pgscr(0,1.,1.,1.)
+  call pgscr(1,0.,0.,0.)
+  call pgsvp(0.,1.,0.,1.)
+  call pgswin(-1.,1.,-1.,1.)
+  call pgrect(-2.,2.,-2.,2.)
+  call pgsci(1)
+
+end subroutine pgwhitebg
 !***********************************************************************************************************************************
