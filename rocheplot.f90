@@ -26,9 +26,14 @@ end module input_data
 !> \brief  Contains plot settings
 
 module plot_settings
+  use input_data, only: npl
   implicit none
+  private :: npl
   
+  real :: xpl(npl),ypl(npl),ypl2(npl)
   real :: xleft,xrigh, ymargin, ysize
+  real :: xlen,yshift
+  logical :: use_colour
   
 end module plot_settings
 !***********************************************************************************************************************************
@@ -66,24 +71,17 @@ program rocheplot
   !
   ! next, the individual graphs are made
   
-  use input_data
-  use plot_settings
-  use roche
+  use input_data, only: klabel, label,csep,iscr,xtl,title,blen,ktel, hei, text,xt,yt
+  use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, xlen,yshift
   
   implicit none
   
-  integer :: i,iaxis,itel,k,kl,nl
+  integer :: i,iaxis,itel,kl
   
-  real :: xpl(npl),ypl(npl),ypl2(npl)
-  real :: asep, dxl,dxr, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
-  real :: x,xacc,xl,xlen,xm1,xm2, xmult,xshift
-  real :: y1,y2,yshift,ysq
+  real :: gravc,sunm,sunr,pi
   
   integer :: command_argument_count, lw
   character :: inputfile*(50),outputfile*(50)  !,yaa(8)
-  logical :: use_colour
-  
-  external rlimit, rline
   
   use_colour = .false.
   use_colour = .true.
@@ -169,153 +167,7 @@ program rocheplot
   
   
   do itel=1,ktel
-     xm1 = rm1(itel)
-     xm2 = rm2(itel)
-     asep = rsep(itel)
-     x = rlag(itel)
-     q = xm1/xm2
-     q11 = 1./(1.+q)
-     const = q/x+1./(1.-x)+0.5*(1.+q)*(x-q11)**2
-     xpl(1) = rlef(itel)
-     xpl(npl) = rrig(itel)
-     ypl(1) = 0.
-     ypl(npl) = 0.
-     
-     
-     ! Compute left lobe:
-     nl = npl/2-1
-     dxl = (x-xpl(1))/real(nl)
-     xacc = 1.e-4
-     do i = 2,nl
-        xl = xpl(1) + real(i-1)*dxl
-        xsq = xl*xl
-        onexsq = (1.-xl)**2
-        const2 = 0.5*(1.+q)*(xl-q11)**2-const
-        y1 = 0.
-        y2 = x**2
-        ysq = rtsafe(rline,y1,y2,xacc)
-        xpl(i) = xl
-        ypl(i) = sqrt(ysq)
-     end do
-     xpl(nl+1) = x
-     ypl(nl+1) = 0.
-     
-     
-     ! Compute right lobe:
-     dxr = (xpl(npl)-x)/real(nl+1)
-     do i = 2,nl+1
-        xl = xpl(nl+1) + real(i-1)*dxr
-        xsq = xl*xl
-        onexsq = (1.-xl)**2
-        const2 = 0.5*(1.+q)*(xl-q11)**2-const
-        y1 = 0.
-        y2 = (1-x)**2
-        ysq = rtsafe(rline,y1,y2,xacc)
-        xpl(nl+i) = xl
-        ypl(nl+i) = sqrt(ysq)
-     end do
-     
-     
-     ! Enlarge and shift lobes:
-     xmult = asep
-     xshift = -asep*xm2/(xm1+xm2)
-     if(itel.eq.1) then
-        yshift = hei(itel) + ymargin
-     else
-        yshift = yshift + hei(itel-1) + hei(itel) + ymargin
-     end if
-     do i=1,npl
-        xpl(i) = xpl(i)*xmult + xshift
-        swap   = ypl(i)*xmult
-        ypl(i)  = swap  + yshift
-        ypl2(i) = -swap + yshift
-     end do
-     
-     
-     ! Left star:
-     if(rad1(itel).gt.1.e5) then  ! Rl filling
-        call pgsci(15)
-        if(use_colour) call pgsci(2)  ! red
-        call pgpoly(nl+1,xpl,ypl)
-        call pgpoly(nl+1,xpl,ypl2)
-        call pgsci(1)
-     else
-        rad = rad1(itel)
-        !          if(rad2(itel).gt.1.e5) then
-        if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
-           radd = 0.7*asep*x
-           call pgsci(15)
-           if(use_colour) call pgsci(5)  ! light blue
-           call plot_disc(xshift,yshift,rad,radd)
-           call pgsci(1)
-        end if
-        call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
-     end if
-     
-     ! Plot left Roche lobe:
-     call pgline(npl,xpl,ypl)
-     call pgline(npl,xpl,ypl2)
-     
-     
-     
-     ! Right star:
-     if(rad2(itel).gt.1.e5) then  ! Rl filling
-        do i=1,nl+2
-           xpl(i)  = xpl(i+nl)
-           ypl(i)  = ypl(i+nl)
-           ypl2(i) = ypl2(i+nl)
-        end do
-        call pgsci(15)
-        if(use_colour) call pgsci(2)  ! red
-        call pgpoly(nl+2, xpl, ypl)   ! Bottom half
-        call pgpoly(nl+2, xpl, ypl2)  ! Top half
-        call pgsci(1)
-     else
-        rad = rad2(itel)
-        if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
-           radd = 0.7*asep*(1.-x)
-           call pgsci(15)
-           if(use_colour) call pgsci(5)  ! light blue
-           call plot_disc(xshift+asep,yshift,rad,radd)
-           call pgsci(1)
-        end if
-        
-        call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
-     end if
-     
-     ! Plot right Roche lobe:
-     call pgline(nl+2,xpl,ypl)
-     call pgline(nl+2,xpl,ypl2)
-     
-     
-     
-     ! Write labels:
-     if(klabel.eq.3) then
-        write(label(1),'(F7.3)') rm1(itel)
-        write(label(2),'(F7.3)') rm2(itel)
-     else
-        write(label(1),'(F5.2)') rm1(itel)
-        write(label(2),'(F5.2)') rm2(itel)
-        if(maxval(age_mc(1:ktel)).lt.2.) then
-           write(label(4),'(F7.3)') age_mc(itel)
-        else if(maxval(age_mc(1:ktel)).lt.50.) then
-           write(label(4),'(F6.2)') age_mc(itel)
-        else
-           write(label(4),'(I3)') nint(age_mc(itel))
-        end if
-        if(klabel.ge.5) write(label(5),'(A)') trim(txt(itel))
-     end if
-     write(label(3),'(F7.2)') pb(itel)
-     
-     do k=1,klabel
-        if(k.eq.5) then
-           call pgptxt(xtl(k),yshift,0.,0.0,trim(label(k)))  ! Align left
-        else
-           call pgptxt(xtl(k),yshift,0.,0.5,trim(label(k)))  ! Align centre
-        endif
-     end do
-     
-     ! call pgtext(xaa,yshift,yaa(itel))
+     call plot_binary(itel)  ! Plot each binary; Roche lobes, stars and labels
   end do  ! do itel = 1,ktel
   
   
@@ -326,8 +178,8 @@ program rocheplot
   xlen = real(blen)
   xpl(2) = xlen/2.
   xpl(1) = -xpl(2)
-  !      yshift = yshift+hei(ktel)+2*ymargin
-  yshift = yshift+hei(ktel)+5*ymargin
+  !yshift = yshift+hei(ktel) + 2*ymargin
+  yshift = yshift+hei(ktel) + 5*ymargin
   ypl(1) = yshift
   ypl(2) = ypl(1)
   call pgline(2,xpl,ypl)
@@ -559,8 +411,8 @@ end function rtsafe
 !> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
 
 subroutine read_input_file(inputfile)
-  use input_data
-  use plot_settings
+  use input_data !, only: rm1,rm2,pb,rad1,rad2
+  use plot_settings, only: xleft,ysize,ymargin,xrigh
   use roche, only: q,q11, const
   
   implicit none
@@ -713,4 +565,176 @@ subroutine pgwhitebg()
   call pgsci(1)
 
 end subroutine pgwhitebg
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Plot each binary; Roche lobes, stars and labels
+!!
+!! \param itel  Number of the current binary/evolutionary state (1-ktel)
+
+subroutine plot_binary(itel)
+  use input_data, only: npl, age_mc, rm1,rm2,rsep,rlag,rlef,rrig,hei,rad1,rad2,klabel,label,ktel,txt, pb,xtl
+  use plot_settings, only: xpl,ypl,ypl2, use_colour, ysize,ymargin, yshift
+  use roche
+  
+  implicit none
+  integer, intent(in) :: itel
+  integer :: il,pl,k,nl
+  real :: asep, dxl,dxr, rad,radd,swap, rtsafe
+  real :: x,xacc,xl,xm1,xm2, xmult,xshift
+  real :: y1,y2,ysq
+  
+  external :: rline
+  
+  
+  xm1 = rm1(itel)
+  xm2 = rm2(itel)
+  asep = rsep(itel)
+  x = rlag(itel)
+  q = xm1/xm2
+  q11 = 1./(1.+q)
+  const = q/x+1./(1.-x)+0.5*(1.+q)*(x-q11)**2
+  xpl(1) = rlef(itel)
+  xpl(npl) = rrig(itel)
+  ypl(1) = 0.
+  ypl(npl) = 0.
+  
+  
+  ! Compute left lobe:
+  nl = npl/2-1
+  dxl = (x-xpl(1))/real(nl)
+  xacc = 1.e-4
+  do il = 2,nl
+     xl = xpl(1) + real(il-1)*dxl
+     xsq = xl*xl
+     onexsq = (1.-xl)**2
+     const2 = 0.5*(1.+q)*(xl-q11)**2-const
+     y1 = 0.
+     y2 = x**2
+     ysq = rtsafe(rline,y1,y2,xacc)
+     xpl(il) = xl
+     ypl(il) = sqrt(ysq)
+  end do
+  xpl(nl+1) = x
+  ypl(nl+1) = 0.
+  
+  
+  ! Compute right lobe:
+  dxr = (xpl(npl)-x)/real(nl+1)
+  do il = 2,nl+1
+     xl = xpl(nl+1) + real(il-1)*dxr
+     xsq = xl*xl
+     onexsq = (1.-xl)**2
+     const2 = 0.5*(1.+q)*(xl-q11)**2-const
+     y1 = 0.
+     y2 = (1-x)**2
+     ysq = rtsafe(rline,y1,y2,xacc)
+     xpl(nl+il) = xl
+     ypl(nl+il) = sqrt(ysq)
+  end do
+  
+  
+  ! Enlarge and shift lobes:
+  xmult = asep
+  xshift = -asep*xm2/(xm1+xm2)
+  if(itel.eq.1) then
+     yshift = hei(itel) + ymargin
+  else
+     yshift = yshift + hei(itel-1) + hei(itel) + ymargin
+  end if
+  do pl=1,npl
+     xpl(pl)  = xpl(pl)*xmult + xshift
+     swap     = ypl(pl)*xmult
+     ypl(pl)  =  swap + yshift
+     ypl2(pl) = -swap + yshift
+  end do
+  
+  
+  ! Left star:
+  if(rad1(itel).gt.1.e5) then  ! Rl filling
+     call pgsci(15)
+     if(use_colour) call pgsci(2)  ! red
+     call pgpoly(nl+1,xpl,ypl)
+     call pgpoly(nl+1,xpl,ypl2)
+     call pgsci(1)
+  else
+     rad = rad1(itel)
+     !          if(rad2(itel).gt.1.e5) then
+     if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
+        radd = 0.7*asep*x
+        call pgsci(15)
+        if(use_colour) call pgsci(5)  ! light blue
+        call plot_disc(xshift,yshift,rad,radd)
+        call pgsci(1)
+     end if
+     call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
+  end if
+  
+  ! Plot left Roche lobe:
+  call pgline(npl,xpl,ypl)
+  call pgline(npl,xpl,ypl2)
+  
+  
+  
+  ! Right star:
+  if(rad2(itel).gt.1.e5) then  ! Rl filling
+     do il=1,nl+2
+        xpl(il)  = xpl(il+nl)
+        ypl(il)  = ypl(il+nl)
+        ypl2(il) = ypl2(il+nl)
+     end do
+     call pgsci(15)
+     if(use_colour) call pgsci(2)  ! red
+     call pgpoly(nl+2, xpl, ypl)   ! Bottom half
+     call pgpoly(nl+2, xpl, ypl2)  ! Top half
+     call pgsci(1)
+  else
+     rad = rad2(itel)
+     if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
+        radd = 0.7*asep*(1.-x)
+        call pgsci(15)
+        if(use_colour) call pgsci(5)  ! light blue
+        call plot_disc(xshift+asep,yshift,rad,radd)
+        call pgsci(1)
+     end if
+     
+     call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
+  end if
+  
+  ! Plot right Roche lobe:
+  call pgline(nl+2,xpl,ypl)
+  call pgline(nl+2,xpl,ypl2)
+  
+  
+  
+  ! Write labels:
+  if(klabel.eq.3) then
+     write(label(1),'(F7.3)') rm1(itel)
+     write(label(2),'(F7.3)') rm2(itel)
+  else
+     write(label(1),'(F5.2)') rm1(itel)
+     write(label(2),'(F5.2)') rm2(itel)
+     if(maxval(age_mc(1:ktel)).lt.2.) then
+        write(label(4),'(F7.3)') age_mc(itel)
+     else if(maxval(age_mc(1:ktel)).lt.50.) then
+        write(label(4),'(F6.2)') age_mc(itel)
+     else
+        write(label(4),'(I3)') nint(age_mc(itel))
+     end if
+     if(klabel.ge.5) write(label(5),'(A)') trim(txt(itel))
+  end if
+  write(label(3),'(F7.2)') pb(itel)
+  
+  do k=1,klabel
+     if(k.eq.5) then
+        call pgptxt(xtl(k),yshift,0.,0.0,trim(label(k)))  ! Align left
+     else
+        call pgptxt(xtl(k),yshift,0.,0.5,trim(label(k)))  ! Align centre
+     endif
+  end do
+  
+  ! call pgtext(xaa,yshift,yaa(itel))
+  
+end subroutine plot_binary
 !***********************************************************************************************************************************
