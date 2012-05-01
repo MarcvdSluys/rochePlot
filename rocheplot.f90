@@ -8,12 +8,14 @@ module input_data
   implicit none
   
   integer, parameter :: npl=100, ng=10
-  integer :: klabel, ktel, nev
+  integer :: klabel, ktel
+  integer :: blen, iscr
   
   real :: csep, rm1(ng),rm2(ng),pb(ng),rad1(ng),rad2(ng), age_mc(ng)
   real :: rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng)
+  real :: xtl(5), xt,yt
   
-  character :: txt(ng)*(50)
+  character :: txt(ng)*(50), label(5)*(50), text*(50), title*(50)
   
 end module input_data
 !***********************************************************************************************************************************
@@ -56,15 +58,15 @@ program rocheplot
   
   implicit none
   
-  integer :: i,iaxis,blen,iscr,itel,k,kl,nl
+  integer :: i,iaxis,itel,k,kl,nl
   
-  real :: xpl(npl),ypl(npl),ypl2(npl),xtl(5)
+  real :: xpl(npl),ypl(npl),ypl2(npl)
   real :: asep, q,q11,const,const2,xsq,onexsq, dxl,dxr, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
-  real :: x,xacc,xl,xlen,xm1,xm2, xmult,xshift,xt
-  real :: y1,y2,yshift,ysq,yt
+  real :: x,xacc,xl,xlen,xm1,xm2, xmult,xshift
+  real :: y1,y2,yshift,ysq
   
   integer :: command_argument_count, lw
-  character :: text*(50),label(5)*(50),bla,title*(50),inputfile*(50),outputfile*(50)  !,yaa(8)
+  character :: inputfile*(50),outputfile*(50)  !,yaa(8)
   logical :: use_colour
   
   external rlimit, rline
@@ -104,33 +106,9 @@ program rocheplot
   end if
   
   
-  write(*,'(A)') ' Reading input file '//trim(inputfile)
-  open(unit=10,form='formatted',status='old',file=trim(inputfile))
-  
-  read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
-  read(10,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
-  if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
-  
-  read(10,*) bla
-  bla = bla  ! Remove 'unused' compiler warnings
-  
   
   ! Read the lines of the input file containting evolutionary states:
-  call read_input_evolutionary_states()
-  
-  ! Read the rest of the input file:
-  read(10,*) iscr
-  read(10,*) blen  ! Length of the scale bar
-  do kl=1,klabel
-     read(10,*) xtl(kl)  ! Column headers
-  end do
-  read(10,'(A50)') label(4)
-  read(10,'(A50)') title  ! Plot title
-  
-  read(10,*) xt
-  read(10,*) yt
-  read(10,'(A)') text
-  close(10)
+  call read_input_file(trim(inputfile))
   
   
   
@@ -567,26 +545,41 @@ end function rtsafe
 !***********************************************************************************************************************************
 !> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
 
-subroutine read_input_evolutionary_states()
+subroutine read_input_file(inputfile)
   use input_data
   use plot_settings
   
   implicit none
   
-  integer :: io, itel, ki
+  character, intent(in) :: inputfile*(*)
   
+  integer :: io, itel, ki, nev
   real :: asep, q,q11,const, dfx,dx,fx, rtsafe, const2,onexsq,xsq
   real :: x,x1,x2,xacc,xright,xshift
   real :: xmargin, xmin,xmax
+  character :: tmpstr
   
   common /roche/ q,q11,const,const2,xsq,onexsq
   
   external :: rlimit
   
   
+  ! Open input file:
+  write(*,'(A)') ' Reading input file '//trim(inputfile)
+  open(unit=10,form='formatted',status='old',file=trim(inputfile))
+  
+  read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
+  read(10,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
+  if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
+  
+  read(10,*) tmpstr
+  tmpstr = tmpstr  ! Remove 'unused' compiler warnings
+  
+  
+  
+  ! Read the lines containting evolutionary states and compute positions/limits of the Roche lobes:
   xmin =  huge(xmin)
   xmax = -huge(xmax)
-  
   do itel=1,nev
      select case(klabel)
      case(3)
@@ -675,7 +668,22 @@ subroutine read_input_evolutionary_states()
   
   
   
-end subroutine read_input_evolutionary_states
+  ! Read the rest of the input file:
+  read(10,*) iscr
+  read(10,*) blen  ! Length of the scale bar
+  do ki=1,klabel
+     read(10,*) xtl(ki)  ! Column headers
+  end do
+  read(10,'(A50)') label(4)
+  read(10,'(A50)') title  ! Plot title
+  
+  read(10,*) xt
+  read(10,*) yt
+  read(10,'(A)') text
+  close(10)
+  
+  
+end subroutine read_input_file
 !***********************************************************************************************************************************
 
 
