@@ -264,8 +264,8 @@ subroutine rline(y, f,df)
   
   real :: r1,r2
   
-  r1 = sqrt(xsq+y)
-  r2 = sqrt(onexsq+y)
+  r1 = sqrt(y + xsq)
+  r2 = sqrt(y + onexsq)
   
   f  = q/r1 + 1./r2 + const2
   df = -0.5*q/r1**3 - 0.5/r2**3
@@ -412,7 +412,7 @@ end function rtsafe
 !> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
 
 subroutine read_input_file(inputfile)
-  use input_data !, only: rm1,rm2,pb,rad1,rad2
+  use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
   use roche, only: q,q11, const
   
@@ -613,7 +613,7 @@ subroutine plot_binary(itel)
      xl = xpl(1) + real(il-1)*dxl
      xsq = xl*xl
      onexsq = (1.-xl)**2
-     const2 = 0.5*(1.+q)*(xl-q11)**2-const
+     const2 = 0.5*(1.+q)*(xl-q11)**2 - const
      y1 = 0.
      y2 = x**2
      ysq = rtsafe(rline,y1,y2,xacc)
@@ -623,6 +623,7 @@ subroutine plot_binary(itel)
   xpl(nl+1) = x
   ypl(nl+1) = 0.
   
+  print*,const,const2
   
   ! Compute right lobe:
   dxr = (xpl(npl)-x)/real(nl+1)
@@ -630,7 +631,7 @@ subroutine plot_binary(itel)
      xl = xpl(nl+1) + real(il-1)*dxr
      xsq = xl*xl
      onexsq = (1.-xl)**2
-     const2 = 0.5*(1.+q)*(xl-q11)**2-const
+     const2 = 0.5*(1.+q)*(xl-q11)**2 - const
      y1 = 0.
      y2 = (1-x)**2
      ysq = rtsafe(rline,y1,y2,xacc)
