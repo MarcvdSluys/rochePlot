@@ -12,11 +12,23 @@ module input_data
   
   real :: csep, rm1(ng),rm2(ng),pb(ng),rad1(ng),rad2(ng), age_mc(ng)
   real :: rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng)
-  real :: xmin,xmax
   
   character :: txt(ng)*(50)
   
 end module input_data
+!***********************************************************************************************************************************
+
+
+
+!***********************************************************************************************************************************
+!> \brief  Contains plot settings
+
+module plot_settings
+  implicit none
+  
+  real :: xleft,xrigh, ymargin, ysize
+  
+end module plot_settings
 !***********************************************************************************************************************************
 
 
@@ -40,6 +52,7 @@ program rocheplot
   ! next, the individual graphs are made
   
   use input_data
+  use plot_settings
   
   implicit none
   
@@ -47,8 +60,8 @@ program rocheplot
   
   real :: xpl(npl),ypl(npl),ypl2(npl),xtl(5)
   real :: asep, q,q11,const,const2,xsq,onexsq, dxl,dxr, gravc,sunm,sunr,pi, rad,radd,swap, rtsafe
-  real :: x,xacc,xl,xleft,xlen,xm1,xm2,xmargin,xmult,xrigh,xshift,xt
-  real :: y1,y2,ymargin,yshift,ysize,ysq,yt
+  real :: x,xacc,xl,xlen,xm1,xm2, xmult,xshift,xt
+  real :: y1,y2,yshift,ysq,yt
   
   integer :: command_argument_count, lw
   character :: text*(50),label(5)*(50),bla,title*(50),inputfile*(50),outputfile*(50)  !,yaa(8)
@@ -104,22 +117,6 @@ program rocheplot
   
   ! Read the lines of the input file containting evolutionary states:
   call read_input_evolutionary_states()
-  
-  ! After all limits have been sampled, now calculate plot limits:
-  ! - silly: if bar falls off plot, increase ysize
-  
-  xmargin = 0.2*(xmax-xmin)
-  ysize = 0.
-  do i=1,ktel      
-     ysize = ysize+hei(i)
-  end do
-  ysize = 2.5*ysize*1.25
-  ymargin = 0.02*ysize
-  xleft = xmin - xmargin
-  xrigh = xmax + xmargin*4.
-  write(6,*) 'Plot limits: ',xleft,xrigh,ysize
-  
-  
   
   ! Read the rest of the input file:
   read(10,*) iscr
@@ -572,15 +569,15 @@ end function rtsafe
 
 subroutine read_input_evolutionary_states()
   use input_data
+  use plot_settings
   
   implicit none
   
-  integer :: io
-  
-  integer :: itel
+  integer :: io, itel, ki
   
   real :: asep, q,q11,const, dfx,dx,fx, rtsafe, const2,onexsq,xsq
-  real :: x,x1,x2,xacc,xleft,xright,xshift
+  real :: x,x1,x2,xacc,xright,xshift
+  real :: xmargin, xmin,xmax
   
   common /roche/ q,q11,const,const2,xsq,onexsq
   
@@ -657,6 +654,26 @@ subroutine read_input_evolutionary_states()
      xright = asep*rrig(ktel) + xshift
      xmax = max(xmax,xright)
   end do
+  
+  
+  ! After all limits have been sampled, now calculate plot limits:
+  ! - silly: if bar falls off plot, increase ysize
+  
+  xmargin = 0.2*(xmax-xmin)
+  ysize = 0.
+  do ki=1,ktel      
+     ysize = ysize + hei(ki)
+  end do
+  
+  ysize = 2.5*ysize*1.25
+  ymargin = 0.02*ysize
+  
+  xleft = xmin - xmargin
+  xrigh = xmax + xmargin*4.
+  
+  write(6,'(A,3F12.3)') ' Plot limits: ',xleft,xrigh,ysize
+  
+  
   
 end subroutine read_input_evolutionary_states
 !***********************************************************************************************************************************
