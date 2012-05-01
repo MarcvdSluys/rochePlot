@@ -23,7 +23,7 @@ program rocheplot
   implicit none
   
   integer, parameter :: npl=100, ng=10
-  integer :: nev, i,iaxis,ilen,iscr,itel,k,kl,klabel,ktel,nl
+  integer :: nev, i,iaxis,blen,iscr,itel,k,kl,klabel,ktel,nl
   
   real :: rm1(ng),rm2(ng),rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng),rad1(ng),rad2(ng),xpl(npl),ypl(npl),ypl2(npl),xtl(5)
   real :: pb(ng), age_mc(ng)
@@ -32,7 +32,7 @@ program rocheplot
   real :: y1,y2,ymargin,yshift,ysize,ysq,yt
   
   integer :: command_argument_count, lw
-  character :: txt(ng)*50, text*50,label(5)*50,bla,title*50,fname*50  !,yaa(8)
+  character :: txt(ng)*(50), text*(50),label(5)*(50),bla,title*(50),inputfile*(50),outputfile*(50)  !,yaa(8)
   logical :: use_colour
   
   external rlimit,rline
@@ -43,14 +43,17 @@ program rocheplot
   use_colour = .true.
   
   ! Column headers:
-  data label/'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', &
-       'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', ''/
+  label = [character(len=50) :: 'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', 'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', '']
   
   ! Figure labels:
-  !data yaa/'c','d','e','f','g','h','g','h'/
+  !yaa = [character :: 'c','d','e','f','g','h','g','h']
   
   ! Some physical constants:
-  data gravc,sunm,sunr,pi /6.668e-8,1.989e33,6.96e10,3.1415926/
+  gravc = 6.668e-8
+  sunm  = 1.989e33
+  sunr  = 6.96e10
+  pi    = 3.1415926
+  
   
   ! Constant for orbital separation from mass and orbital period:
   csep= ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
@@ -64,21 +67,24 @@ program rocheplot
   
   
   ! Read command-line variables:
+  inputfile = 'input.dat'
+  outputfile = 'rochelobes.eps'
   if(command_argument_count().eq.1) then
-     call get_command_argument(1, fname)
-  else 
-     fname = 'input.dat'
+     call get_command_argument(1, inputfile)
+     i = index(inputfile,'.dat', back=.true.)                      ! Find last dot in input file name
+     if(i.gt.0.and.i.lt.50) outputfile = inputfile(1:i-1)//'.eps'  ! When file.dat is input, use file.eps as output
   end if
   
   
-  write(*,'(A)') ' Reading input file '//trim(fname)
-  open(unit=10,form='formatted',status='old',file=trim(fname))
+  write(*,'(A)') ' Reading input file '//trim(inputfile)
+  open(unit=10,form='formatted',status='old',file=trim(inputfile))
   
   read(10,*) klabel
   read(10,*) nev
   if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
   
   read(10,*) bla
+  bla = bla  ! Remove 'unused' compiler warnings
   
   do itel=1,nev
      select case(klabel)
@@ -99,7 +105,7 @@ program rocheplot
      ! Calculate inner Lagrangian point, start with estimate:
      q = rm1(ktel)/rm2(ktel)
      q11 = 1./(1.+q)
-     x = 0.5+0.2222222*alog10(q)
+     x = 0.5+0.2222222*log10(q)
      
 1    continue
      fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
@@ -153,11 +159,11 @@ program rocheplot
   
   read(10,*) iscr
   if(iscr.eq.0) then
-     write(6,*)'Plot written to rochelobes.eps'
+     write(6,*)'Saving plot as '//trim(outputfile)
      if(use_colour) then
-        call pgbegin(0,'rochelobes.eps/cps',1,1)
+        call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
      else
-        call pgbegin(0,'rochelobes.eps/ps',1,1)
+        call pgbegin(0,''//trim(outputfile)//'/ps',1,1)
      end if
      lw = 2
      call pgscf(1)
@@ -183,7 +189,7 @@ program rocheplot
   call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
   call pgsci(1)
   
-  read(10,*) ilen  ! Length of the scale bar
+  read(10,*) blen  ! Length of the scale bar
   
   
   ! Read and print column headers:
@@ -225,9 +231,9 @@ program rocheplot
      
      ! Compute left lobe:
      nl = npl/2-1
-     dxl = (x-xpl(1))/nl
+     dxl = (x-xpl(1))/real(nl)
      do i = 2,nl
-        xl = xpl(1)+(i-1)*dxl
+        xl = xpl(1) + real(i-1)*dxl
         xsq = xl*xl
         onexsq = (1.-xl)**2
         const2 = 0.5*(1.+q)*(xl-q11)**2-const
@@ -242,9 +248,9 @@ program rocheplot
      
      
      ! Compute right lobe:
-     dxr = (xpl(npl)-x)/(nl+1)
+     dxr = (xpl(npl)-x)/real(nl+1)
      do i = 2,nl+1
-        xl = xpl(nl+1)+(i-1)*dxr
+        xl = xpl(nl+1) + real(i-1)*dxr
         xsq = xl*xl
         onexsq = (1.-xl)**2
         const2 = 0.5*(1.+q)*(xl-q11)**2-const
@@ -363,7 +369,7 @@ program rocheplot
   
   
   ! Plot scale bar:
-  xlen = ilen*1.
+  xlen = real(blen)
   xpl(2) = xlen/2.
   xpl(1) = -xpl(2)
   !      yshift = yshift+hei(ktel)+2*ymargin
@@ -373,7 +379,7 @@ program rocheplot
   call pgline(2,xpl,ypl)
   
   
-  write(text,'(I5,"R\d\(2281)")') ilen
+  write(text,'(I5,"R\d\(2281)")') blen
   !      call pgtext(xpl(2),ypl(2),text)
   call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
   
@@ -400,8 +406,8 @@ program rocheplot
   !        goto 123
   !      end if
   
-  read(10,*)  xt
-  read(10,*)  yt
+  read(10,*) xt
+  read(10,*) yt
   read(10,'(A)') text
   
   if(xt.ne.0.) call pgtext(xt,yt,text)
@@ -477,10 +483,10 @@ subroutine cirkel(xc,yc,rad,n)
   integer :: i
   real :: x(n),y(n), step,phi
   
-  step = 6.2831852/(n-1)
+  step = 6.2831852/real(n-1)
   
   do i=1,n
-     phi  = i*step
+     phi  = real(i)*step
      x(i) = xc + rad*cos(phi)
      y(i) = yc + rad*sin(phi)
   end do
@@ -543,7 +549,8 @@ function rtsafe(funcd, x1,x2, xacc)
   implicit none
   integer, parameter :: maxit=100
   integer :: j
-  real :: rtsafe, x1,x2,xacc,dx,dxold,xh,xl, f,df,fh,fl, swap,temp
+  real, intent(in) :: x1,x2,xacc
+  real :: rtsafe, dx,dxold,xh,xl, f,df,fh,fl, swap,temp
   
   
   call funcd(x1,fl,df)
