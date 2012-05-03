@@ -17,6 +17,7 @@ module input_data
   real :: csep, rm1(ng),rm2(ng),pb(ng),rad1(ng),rad2(ng), age_mc(ng)
   real :: rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng)
   real :: xtl(5), xt,yt
+  logical :: ce(ng)
   
   character :: txt(ng)*(50), label(5)*(50), text*(50), title*(50)
   
@@ -235,6 +236,10 @@ end program rocheplot
 
 !***********************************************************************************************************************************
 !> \brief  Calculates outer limit of Roche lobe
+!!
+!! \param x   Position along binary axis
+!! \param f   Roche potential
+!! \param df  First derivative of Roche potential to x
 
 subroutine rlimit(x, f,df)
   use roche, only: q,q11, const1
@@ -257,7 +262,11 @@ end subroutine rlimit
 
 
 !***********************************************************************************************************************************
-!> \brief  Calculates value of y^2 for x^2 value
+!> \brief  Calculates value of y^2 for given x^2 value
+!!
+!! \param x   Position along binary axis
+!! \param f   Roche potential
+!! \param df  First derivative of Roche potential to x
 
 subroutine rline(y, f,df)
   use roche, only: q, const2, xsq,onexsq
@@ -493,9 +502,14 @@ subroutine read_input_file(inputfile)
      CEdiff(itel) = 0.33/q
      if(q.lt.1) CEdiff(itel) = 0.33*q
      
+     ce(itel) = .false.
+     !ce(itel) = .true.
+     if(min(rad1(itel),rad2(itel)).gt.1.e5) ce(itel) = .true.
+     
      ! Calculate limits of lobes (before shift):
      const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
-     if(min(rad1(itel),rad2(itel)).gt.1.e5) const1 = const1 - CEdiff(itel)    ! CE
+     
+     if(ce(itel)) const1 = const1 - CEdiff(itel)    ! CE
      
      xacc = 1.e-4
      x1 = 1.5 - 0.5*x
@@ -585,7 +599,7 @@ end subroutine pgwhitebg
 !! \param itel  Number of the current binary/evolutionary state (1-ktel)
 
 subroutine plot_binary(itel)
-  use input_data, only: npl, age_mc, rm1,rm2,rsep,rlag,rlef,rrig,hei,rad1,rad2,klabel,label,ktel,txt, pb,xtl
+  use input_data, only: npl, age_mc, rm1,rm2,rsep,rlag,rlef,rrig,hei,rad1,rad2,klabel,label,ktel,txt, pb,xtl, ce
   use plot_settings, only: xpl,ypl,ypl2, use_colour, ysize,ymargin, yshift
   use roche
   
@@ -595,7 +609,6 @@ subroutine plot_binary(itel)
   real :: asep, rad,radd,swap, rtsafe
   real :: x,xacc,xl,xm1,xm2, xmult,xshift
   real :: y1,y2,ysq, xtmp,ytmp, dy, xmap
-  logical :: ce
   
   external :: rline
   
@@ -606,12 +619,8 @@ subroutine plot_binary(itel)
   q = xm1/xm2         ! q1
   q11 = 1./(1.+q)     ! M2/Mtot
   
-  ce = .false.
-  !ce = .true.
-  if(min(rad1(itel),rad2(itel)).gt.1.e5) ce = .true.
-  
   const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
-  if(ce) const1 = const1 - CEdiff(itel)  ! CE
+  if(ce(itel)) const1 = const1 - CEdiff(itel)  ! CE
   
   xpl(1)   = rlef(itel)  ! Left limit of Rl
   xpl(npl) = rrig(itel)  ! Right limit of Rl
@@ -675,7 +684,7 @@ subroutine plot_binary(itel)
   
   
   ! Plot left star/disc:
-  if(.not.ce) then
+  if(.not.ce(itel)) then
      if(rad1(itel).gt.1.e5) then  ! Rl filling
         call pgsci(15)
         if(use_colour) call pgsci(2)  ! red
@@ -697,7 +706,7 @@ subroutine plot_binary(itel)
   
   
   ! Plot CE:
-  if(ce) then  
+  if(ce(itel)) then
      ! Make sure Rl contour does not go through L1 point:
      xtmp = xpl(nl+1)
      xpl(nl+1)  = xpl(nl)
@@ -720,14 +729,14 @@ subroutine plot_binary(itel)
   call pgline(npl,xpl,ypl2)  ! RL top contour
   
   
-  if(ce) then
+  if(ce(itel)) then
      xpl(nl+1) = xtmp
      ypl(nl+1) = ytmp
   end if
   
   
   ! Plot right star/disc:
-  if(.not.ce) then
+  if(.not.ce(itel)) then
      if(rad2(itel).gt.1.e5) then  ! Rl filling
         do il=1,nl+2
            xpl(il)  = xpl(il+nl)
@@ -754,7 +763,7 @@ subroutine plot_binary(itel)
   end if
   
   
-  if(ce) then
+  if(ce(itel)) then
      call pgcirc(xshift+asep,yshift,ysize*0.002)  ! Plot core
      
      ! Make sure Rl contour doesn't go through L1 point: - not needed when not plotting right Rl (again)
@@ -765,7 +774,7 @@ subroutine plot_binary(itel)
   
   
   ! Plot right Roche lobe:
-  if(.not.ce) then
+  if(.not.ce(itel)) then
      call pgline(nl+2,xpl,ypl)
      call pgline(nl+2,xpl,ypl2)
   end if
