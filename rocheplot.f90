@@ -7,7 +7,7 @@
 module input_data
   implicit none
   
-  integer, parameter :: npl=100  ! Number of plotting points
+  integer, parameter :: npl=20  ! Number of plotting points
   integer, parameter :: ng=10    ! Maximum number of binaries that can be plotted
   integer :: klabel, ktel
   integer :: blen, iscr
@@ -47,7 +47,7 @@ end module plot_settings
 module roche
   implicit none
   
-  real :: q,q11, const,const2, xsq,onexsq
+  real :: q,q11, const1,const2,CEconst, xsq,onexsq
   
 end module roche
 !***********************************************************************************************************************************
@@ -74,6 +74,7 @@ program rocheplot
   
   use input_data, only: klabel, label,csep,iscr,xtl,title,blen,ktel, hei, text,xt,yt
   use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, xlen,yshift
+  use roche, only: CEconst
   
   implicit none
   
@@ -99,6 +100,7 @@ program rocheplot
   sunr  = 6.96e10
   pi    = 3.1415926
   
+  CEconst = 0.1  ! constant to subtract from potential in case of a CE; ~0.1
   
   ! Constant for orbital separation from mass and orbital period:
   csep= ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
@@ -126,7 +128,7 @@ program rocheplot
   
   ! Initialise plot output:
   if(iscr.eq.0) then
-     write(6,*)'Saving plot as '//trim(outputfile)
+     write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
      if(use_colour) then
         call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
      else
@@ -234,7 +236,7 @@ end program rocheplot
 !> \brief  Calculates outer limit of Roche lobe
 
 subroutine rlimit(x, f,df)
-  use roche, only: q,q11, const
+  use roche, only: q,q11, const1
   
   implicit none
   real, intent(in) :: x
@@ -246,7 +248,7 @@ subroutine rlimit(x, f,df)
   r2 = abs(1.-x)
   r3 = abs(x-q11)
   
-  f  = q/r1 + 1./r2 + 0.5*(1.+q)*r3**2 - const
+  f  = q/r1 + 1./r2 + 0.5*(1.+q)*r3**2 - const1
   df = -q*x/r1**3 + (1.-x)/r2**3 + (1.+q)*(x-q11)
   
 end subroutine rlimit
@@ -414,7 +416,7 @@ end function rtsafe
 subroutine read_input_file(inputfile)
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
-  use roche, only: q,q11, const
+  use roche, only: q,q11, const1,CEconst
   
   implicit none
   character, intent(in) :: inputfile*(*)
@@ -428,7 +430,7 @@ subroutine read_input_file(inputfile)
   
   
   ! Open input file:
-  write(*,'(A)') ' Reading input file '//trim(inputfile)
+  write(*,'(A,/)') ' Reading input file: '//trim(inputfile)
   open(unit=10,form='formatted',status='old',file=trim(inputfile))
   
   read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
@@ -486,18 +488,21 @@ subroutine read_input_file(inputfile)
      end if
      
      
-     ! Calculate left limit of lobe (before shift):
-     const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+     ! Calculate limits of lobes (before shift):
+     const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+     if(min(rad1(itel),rad2(itel)).gt.1.e5) const1 = const1 - CEconst  ! CE
+     
+     xacc = 1.e-4
      x1 = 1.5 - 0.5*x
      x2 = 2.0 - x
-     xacc = 1.e-4
-     rrig(ktel) = rtsafe(rlimit,x1,x2,xacc)  ! Right limit
+     rrig(ktel) = rtsafe(rlimit, x1,x2, xacc)  ! Right limit
      
      x1 = -0.5*x
      x2 = -x
-     rlef(ktel) = rtsafe(rlimit,x1,x2,xacc)  ! Left limit
+     rlef(ktel) = rtsafe(rlimit, x1,x2, xacc)  ! Left limit
      
-     write(*,'(A,4G12.3)') ' Roche limits: ',rlef(ktel),rlag(ktel),rrig(ktel),hei(ktel)
+     
+     write(*,'(A,4G12.3)') ' Roche limits: ', rlef(ktel), rlag(ktel), rrig(ktel), hei(ktel)
      
      
      ! Calculate limits after enlarging and shift, and keep track of minima and maxima:
@@ -527,7 +532,7 @@ subroutine read_input_file(inputfile)
   xleft = xmin - xmargin
   xrigh = xmax + xmargin*4.
   
-  write(6,'(A,3F12.3)') ' Plot limits: ',xleft,xrigh,ysize
+  write(6,'(/,A,3F12.3)') ' Plot limits: ',xleft,xrigh,ysize
   
   
   
@@ -584,10 +589,10 @@ subroutine plot_binary(itel)
   integer :: il,pl,k,nl
   real :: asep, dxl,dxr, rad,radd,swap, rtsafe
   real :: x,xacc,xl,xm1,xm2, xmult,xshift
-  real :: y1,y2,ysq
+  real :: y1,y2,ysq, xtmp,ytmp
+  logical :: ce
   
   external :: rline
-  
   
   xm1 = rm1(itel)     ! M1
   xm2 = rm2(itel)     ! M2
@@ -596,7 +601,11 @@ subroutine plot_binary(itel)
   q = xm1/xm2         ! q1
   q11 = 1./(1.+q)     ! M2/Mtot
   
-  const = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+  ce = .false.
+  if(min(rad1(itel),rad2(itel)).gt.1.e5) ce = .true.
+  
+  const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+  if(ce) const1 = const1 - CEconst  ! CE
   
   xpl(1) = rlef(itel)    ! Left limit of Rl
   xpl(npl) = rrig(itel)  ! Right limit of Rl
@@ -611,12 +620,15 @@ subroutine plot_binary(itel)
   dxl  = (x-xpl(1))/real(nl)
   do il = 2,nl
      xl = xpl(1) + real(il-1)*dxl
+     
      xsq = xl*xl
      onexsq = (1.-xl)**2
-     const2 = 0.5*(1.+q)*(xl-q11)**2 - const
+     const2 = 0.5*(1.+q)*(xl-q11)**2 - const1
+     
      y1 = 0.
      y2 = x**2
      ysq = rtsafe(rline,y1,y2,xacc)
+     
      xpl(il) = xl
      ypl(il) = sqrt(ysq)
   end do
@@ -627,15 +639,27 @@ subroutine plot_binary(itel)
   dxr = (xpl(npl)-x)/real(nl+1)
   do il = 2,nl+1
      xl = xpl(nl+1) + real(il-1)*dxr
+     
      xsq = xl*xl
      onexsq = (1.-xl)**2
-     const2 = 0.5*(1.+q)*(xl-q11)**2 - const
+     const2 = 0.5*(1.+q)*(xl-q11)**2 - const1
+     
      y1 = 0.
-     y2 = (1-x)**2
+     y2 = (1.0-x)**2
      ysq = rtsafe(rline,y1,y2,xacc)
+     
      xpl(nl+il) = xl
      ypl(nl+il) = sqrt(ysq)
   end do
+  
+  
+  if(itel.eq.4) then
+     write(*,'(99F6.2)') xpl
+     print*
+     write(*,'(99F6.2)') ypl
+     !print*
+     !write(*,'(99F6.1)') ypl2
+  end if
   
   
   ! Enlarge and shift lobes:
@@ -658,8 +682,8 @@ subroutine plot_binary(itel)
   if(rad1(itel).gt.1.e5) then  ! Rl filling
      call pgsci(15)
      if(use_colour) call pgsci(2)  ! red
-     call pgpoly(nl+1, xpl, ypl)
-     call pgpoly(nl+1, xpl, ypl2)
+     call pgpoly(nl+1, xpl, ypl)    ! Bottom half
+     call pgpoly(nl+1, xpl, ypl2)  ! Top half
      call pgsci(1)
   else
      rad = rad1(itel)
@@ -673,12 +697,26 @@ subroutine plot_binary(itel)
      call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
   end if
   
+  if(ce) then
+     xtmp = xpl(nl+1)
+     xpl(nl+1)  = xpl(nl)
+     !print*,ypl(nl+1),ypl2(nl+1)
+     ytmp = ypl(nl+1)
+     ypl(nl+1)  = ypl(nl)
+     ypl2(nl+1) = ypl2(nl)
+     !print*,ypl(nl+1),ypl2(nl+1)
+  end if
   
   ! Plot left Roche lobe:
   call pgline(npl,xpl,ypl)
   call pgline(npl,xpl,ypl2)
+  call pgpoint(npl,xpl,ypl,1)
+  call pgpoint(npl,xpl,ypl2,1)
   
-  
+  if(ce) then
+     xpl(nl+1) = xtmp
+     ypl(nl+1) = ytmp
+  end if
   
   ! Plot right star/disc:
   if(rad2(itel).gt.1.e5) then  ! Rl filling
@@ -706,9 +744,28 @@ subroutine plot_binary(itel)
   end if
   
   
+  
+  !if(ce) then
+  !   !xpl(nl+1)  = xpl(nl)
+  !   !print*,ypl(nl+1),ypl2(nl+1)
+  !   ytmp = ypl(nl+1)
+  !   ypl(nl+1)  = ypl(nl)
+  !   ypl2(nl+1) = ypl2(nl)
+  !   !print*,ypl(nl+1),ypl2(nl+1)
+  !end if
+  
+  
   ! Plot right Roche lobe:
   call pgline(nl+2,xpl,ypl)
   call pgline(nl+2,xpl,ypl2)
+  call pgpoint(nl+2,xpl,ypl,1)
+  call pgpoint(nl+2,xpl,ypl2,1)
+  
+  !if(ce) then
+  !   !xpl(nl+1) = x
+  !   ypl(nl+1) = ytmp
+  !end if
+  
   
   
   
