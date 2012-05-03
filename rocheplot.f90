@@ -474,17 +474,17 @@ subroutine read_input_file(inputfile)
      ktel = itel
      
      
-     ! Calculate inner Lagrangian point, start with estimate:
      q = rm1(ktel)/rm2(ktel)
-     q11 = 1./(1.+q)
-     x = 0.5 + 0.2222222*log10(q)
+     q11 = 1.0/(1.0+q)
      
+     ! Calculate inner Lagrangian point, start with estimate:
+     x = 0.5 + 0.2222222*log10(q)
      dx = huge(dx)
      do while(abs(dx).gt.1.e-6)
-        fx = q/x/x-1./(1.-x)**2-(1.+q)*x+1.
-        dfx = -2.*q/x**3-2./(1.-x)**3-(1.+q)
-        dx = -fx/dfx/x
-        x = x*(1.+dx)
+        fx = q/(x**2) - 1.0/(1.0-x)**2 - (1.0+q)*x + 1.0
+        dfx = -2.0*q/x**3 - 2.0/(1.-x)**3 - (1.0+q)
+        dx = -fx/(dfx*x)
+        x = x*(1.0+dx)
      end do
      
      rlag(ktel) = x  ! Inner Lagrangian point
