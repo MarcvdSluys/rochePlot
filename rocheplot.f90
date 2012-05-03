@@ -591,7 +591,7 @@ subroutine plot_binary(itel)
   integer :: il,pl,k,nl
   real :: asep, rad,radd,swap, rtsafe
   real :: x,xacc,xl,xm1,xm2, xmult,xshift
-  real :: y1,y2,ysq, xtmp,ytmp, dy, xmapl,xmapr
+  real :: y1,y2,ysq, xtmp,ytmp, dy, xmap
   logical :: ce
   
   external :: rline
@@ -622,7 +622,7 @@ subroutine plot_binary(itel)
   
   ! Compute left lobe:
   do il = 2,nl
-     xl = xmapl(il,nl,x,xpl(1))  ! Map x-points more densely near outer Rl limit
+     xl = xmap(il,nl, x,xpl(1), 1)  ! Map x-points more densely near outer Rl limit; 1=left
      
      xsq = xl*xl
      onexsq = (1.-xl)**2
@@ -640,7 +640,7 @@ subroutine plot_binary(itel)
   
   ! Compute right lobe:
   do il = 2,nl+1
-     xl = xmapr(il,nl,x,xpl(npl))  ! Map x-points more densely near outer Rl limit
+     xl = xmap(il,nl, x,xpl(npl), 2)  ! Map x-points more densely near outer Rl limit; 2=right
      
      xsq = xl*xl
      onexsq = (1.-xl)**2
@@ -802,48 +802,32 @@ end subroutine plot_binary
 
 
 !***********************************************************************************************************************************
-!> \brief  Map the x-array to plot a left-hand Roche lobe
-!!
-!! \param il      Current point number in array (1-nl)
-!! \param nl      Total number of points in array
-!! \param l1      L1 position
-!! \param llim    Left-most extent of Roche lobe
-!!
-!! \retval xmapl  Mapped position of il-th x value
-
-function xmapl(il,nl, l1,llim)
-  implicit none
-  integer, intent(in) :: il, nl
-  real, intent(in) :: l1,llim
-  real :: xmapl, pio2
-  
-  pio2 = 2*atan(1.)   ! pi/2
-  
-  xmapl = (1.0-cos(real(il-1)/real(nl)*pio2))*(l1-llim) + llim
-  
-end function xmapl
-!***********************************************************************************************************************************
-
-
-!***********************************************************************************************************************************
 !> \brief  Map the x-array to plot a right-hand Roche lobe
 !!
-!! \param il      Current point number in array (1-nl)
-!! \param nl      Total number of points in array
-!! \param l1      L1 position
-!! \param rlim    Right-most extent of Roche lobe
+!! \param il     Current point number in array (1-nl)
+!! \param nl     Total number of points in array
+!! \param l1     L1 position
+!! \param lim    Extreme extent of Roche lobe (farthest from L1)
+!! \param lr     Left (1) or right (2) Roche lobe
 !!
-!! \retval xmapr  Mapped position of il-th x value
+!! \retval xmap  Mapped position of il-th x value
 
-function xmapr(il,nl, l1,rlim)
+function xmap(il,nl, l1,lim, lr)
   implicit none
-  integer, intent(in) :: il, nl
-  real, intent(in) :: l1,rlim
-  real :: xmapr, pio2
+  integer, intent(in) :: il, nl, lr
+  real, intent(in) :: l1,lim
+  real :: xmap, pio2
   
   pio2 = 2*atan(1.)   ! pi/2
   
-  xmapr = cos((1.0-real(il-1)/real(nl+1))*pio2) * (rlim-l1) + l1
+  if(lr.eq.1) then
+     xmap = (1.0-cos(real(il-1)/real(nl)*pio2))   * (l1-lim) + lim
+  else if(lr.eq.2) then
+     xmap = cos((1.0-real(il-1)/real(nl+1))*pio2) * (lim-l1) + l1
+  else
+     write(0,'(/,A,I4,/)') '*** xmap(): ERROR:  parameter lr should be 1 or 2, not',lr
+     stop
+  end if
   
-end function xmapr
+end function xmap
 !***********************************************************************************************************************************
