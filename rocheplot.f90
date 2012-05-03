@@ -239,7 +239,7 @@ end program rocheplot
 !!
 !! \param x   Position along binary axis
 !! \param f   Roche potential
-!! \param df  First derivative of Roche potential to x
+!! \param df  First derivative of f w.r.t. x
 
 subroutine rlimit(x, f,df)
   use roche, only: q,q11, const1
@@ -265,8 +265,8 @@ end subroutine rlimit
 !> \brief  Calculates value of y^2 for given x^2 value
 !!
 !! \param x   Position along binary axis
-!! \param f   Roche potential
-!! \param df  First derivative of Roche potential to x
+!! \param f   Position of Roche surface
+!! \param df  First derivative of f w.r.t. x
 
 subroutine rline(y, f,df)
   use roche, only: q, const2, xsq,onexsq
@@ -371,7 +371,7 @@ function rtsafe(funcd, x1,x2, xacc)
   
   call funcd(x1,fl,df)
   call funcd(x2,fh,df)
-  if(fl*fh.ge.0.) write(0,'(A)') ' rtsafe(): root must be bracketed'
+  if(fl*fh.ge.0.) write(0,'(2(A,2ES12.3))') ' rtsafe(): root must be bracketed:  x1,x2:',x1,x2, '  fl,fh:',fl,fh
   if(fl.lt.0.) then
      xl=x1
      xh=x2
@@ -508,7 +508,6 @@ subroutine read_input_file(inputfile)
      
      ! Calculate limits of lobes (before shift):
      const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
-     
      if(ce(itel)) const1 = const1 - CEdiff(itel)    ! CE
      
      xacc = 1.e-4
