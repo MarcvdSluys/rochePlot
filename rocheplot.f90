@@ -1,4 +1,4 @@
-!> \file  rocheplot.f90  Plots Roche lobes for given binaries
+!> \file  rocheplot.f90  Plots Roche lobes for given set of binaries
 
 
 !***********************************************************************************************************************************
