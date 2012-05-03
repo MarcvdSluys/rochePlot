@@ -7,7 +7,7 @@
 module input_data
   implicit none
   
-  integer, parameter :: npl=20  ! Number of plotting points
+  integer, parameter :: npl=100  ! Number of plotting points
   integer, parameter :: ng=10    ! Maximum number of binaries that can be plotted
   integer :: klabel, ktel
   integer :: blen, iscr
@@ -100,7 +100,7 @@ program rocheplot
   sunr  = 6.96e10
   pi    = 3.1415926
   
-  CEconst = 0.1  ! constant to subtract from potential in case of a CE; ~0.1
+  CEconst = 0.1  ! constant to subtract from potential in case of a CE; <~0.1
   
   ! Constant for orbital separation from mass and orbital period:
   csep= ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
@@ -589,7 +589,7 @@ subroutine plot_binary(itel)
   integer :: il,pl,k,nl
   real :: asep, dxl,dxr, rad,radd,swap, rtsafe
   real :: x,xacc,xl,xm1,xm2, xmult,xshift
-  real :: y1,y2,ysq, xtmp,ytmp
+  real :: y1,y2,ysq, xtmp,ytmp, dy
   logical :: ce
   
   external :: rline
@@ -602,6 +602,7 @@ subroutine plot_binary(itel)
   q11 = 1./(1.+q)     ! M2/Mtot
   
   ce = .false.
+  !ce = .true.
   if(min(rad1(itel),rad2(itel)).gt.1.e5) ce = .true.
   
   const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
@@ -653,15 +654,6 @@ subroutine plot_binary(itel)
   end do
   
   
-  if(itel.eq.4) then
-     write(*,'(99F6.2)') xpl
-     print*
-     write(*,'(99F6.2)') ypl
-     !print*
-     !write(*,'(99F6.1)') ypl2
-  end if
-  
-  
   ! Enlarge and shift lobes:
   xmult = asep
   xshift = -asep*xm2/(xm1+xm2)
@@ -678,94 +670,97 @@ subroutine plot_binary(itel)
   end do
   
   
-  ! Plot left star/disc:
-  if(rad1(itel).gt.1.e5) then  ! Rl filling
-     call pgsci(15)
-     if(use_colour) call pgsci(2)  ! red
-     call pgpoly(nl+1, xpl, ypl)    ! Bottom half
-     call pgpoly(nl+1, xpl, ypl2)  ! Top half
-     call pgsci(1)
-  else
-     rad = rad1(itel)
-     if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
-        radd = 0.7*asep*x
+  if(.not.ce) then  ! Plot left star/disc:
+     if(rad1(itel).gt.1.e5) then  ! Rl filling
         call pgsci(15)
-        if(use_colour) call pgsci(5)  ! light blue
-        call plot_disc(xshift,yshift,rad,radd)
+        if(use_colour) call pgsci(2)  ! red
+        call pgpoly(nl+1, xpl, ypl)    ! Bottom half
+        call pgpoly(nl+1, xpl, ypl2)  ! Top half
         call pgsci(1)
+     else
+        rad = rad1(itel)
+        if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
+           radd = 0.7*asep*x
+           call pgsci(15)
+           if(use_colour) call pgsci(5)  ! light blue
+           call plot_disc(xshift,yshift,rad,radd)
+           call pgsci(1)
+        end if
+        call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
      end if
-     call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
   end if
   
-  if(ce) then
+  
+  if(ce) then  
+     ! Make sure Rl contour does not go through L1 point:
      xtmp = xpl(nl+1)
      xpl(nl+1)  = xpl(nl)
-     !print*,ypl(nl+1),ypl2(nl+1)
+     
      ytmp = ypl(nl+1)
      ypl(nl+1)  = ypl(nl)
      ypl2(nl+1) = ypl2(nl)
-     !print*,ypl(nl+1),ypl2(nl+1)
+     
+     ! Plot both Roche lobe(s):
+     call pgsci(2)
+     dy = ysize*0.0005               ! Create some overlap between the two halves
+     call pgpoly(npl,xpl,ypl  - dy)  ! RL Bottom
+     call pgpoly(npl,xpl,ypl2 + dy)  ! RL Top
+     
+     call pgsci(1)
+     call pgcirc(xshift,yshift,ysize*0.002)  ! Core
   end if
   
-  ! Plot left Roche lobe:
-  call pgline(npl,xpl,ypl)
-  call pgline(npl,xpl,ypl2)
-  call pgpoint(npl,xpl,ypl,1)
-  call pgpoint(npl,xpl,ypl2,1)
+  call pgline(npl,xpl,ypl)   ! RL bottom contour
+  call pgline(npl,xpl,ypl2)  ! RL top contour
+  
   
   if(ce) then
      xpl(nl+1) = xtmp
      ypl(nl+1) = ytmp
   end if
   
-  ! Plot right star/disc:
-  if(rad2(itel).gt.1.e5) then  ! Rl filling
-     do il=1,nl+2
-        xpl(il)  = xpl(il+nl)
-        ypl(il)  = ypl(il+nl)
-        ypl2(il) = ypl2(il+nl)
-     end do
-     call pgsci(15)
-     if(use_colour) call pgsci(2)  ! red
-     call pgpoly(nl+2, xpl, ypl)   ! Bottom half
-     call pgpoly(nl+2, xpl, ypl2)  ! Top half
-     call pgsci(1)
-  else
-     rad = rad2(itel)
-     if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
-        radd = 0.7*asep*(1.-x)
+  
+  if(.not.ce) then  ! Plot right star/disc:
+     if(rad2(itel).gt.1.e5) then  ! Rl filling
+        do il=1,nl+2
+           xpl(il)  = xpl(il+nl)
+           ypl(il)  = ypl(il+nl)
+           ypl2(il) = ypl2(il+nl)
+        end do
         call pgsci(15)
-        if(use_colour) call pgsci(5)  ! light blue
-        call plot_disc(xshift+asep,yshift,rad,radd)
+        if(use_colour) call pgsci(2)  ! red
+        call pgpoly(nl+2, xpl, ypl)   ! Bottom half
+        call pgpoly(nl+2, xpl, ypl2)  ! Top half
         call pgsci(1)
+     else
+        rad = rad2(itel)
+        if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
+           radd = 0.7*asep*(1.-x)
+           call pgsci(15)
+           if(use_colour) call pgsci(5)  ! light blue
+           call plot_disc(xshift+asep,yshift,rad,radd)
+           call pgsci(1)
+        end if
+        
+        call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
      end if
-     
-     call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
   end if
   
   
+  if(ce) then
+     call pgcirc(xshift+asep,yshift,ysize*0.002)  ! Plot core
+     
+     ! Make sure Rl contour doesn't go through L1 point:
+     ytmp = ypl(nl+1)
+     ypl(nl+1)  = ypl(nl)
+     ypl2(nl+1) = ypl2(nl)
+  end if
   
-  !if(ce) then
-  !   !xpl(nl+1)  = xpl(nl)
-  !   !print*,ypl(nl+1),ypl2(nl+1)
-  !   ytmp = ypl(nl+1)
-  !   ypl(nl+1)  = ypl(nl)
-  !   ypl2(nl+1) = ypl2(nl)
-  !   !print*,ypl(nl+1),ypl2(nl+1)
-  !end if
   
-  
-  ! Plot right Roche lobe:
-  call pgline(nl+2,xpl,ypl)
-  call pgline(nl+2,xpl,ypl2)
-  call pgpoint(nl+2,xpl,ypl,1)
-  call pgpoint(nl+2,xpl,ypl2,1)
-  
-  !if(ce) then
-  !   !xpl(nl+1) = x
-  !   ypl(nl+1) = ytmp
-  !end if
-  
+  if(.not.ce) then  ! Plot right Roche lobe:
+     call pgline(nl+2,xpl,ypl)
+     call pgline(nl+2,xpl,ypl2)
+  end if
   
   
   
