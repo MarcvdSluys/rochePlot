@@ -1,5 +1,7 @@
 !> \file  rocheplot.f90  Plots Roche lobes for given set of binaries
 
+! (c) 2003-2012, Frank Verbunt, Marc van der Sluys
+
 
 !***********************************************************************************************************************************
 !> \brief  Contains data from the input file and derived data
@@ -587,9 +589,9 @@ subroutine plot_binary(itel)
   implicit none
   integer, intent(in) :: itel
   integer :: il,pl,k,nl
-  real :: asep, dxl,dxr, rad,radd,swap, rtsafe
+  real :: asep, rad,radd,swap, rtsafe
   real :: x,xacc,xl,xm1,xm2, xmult,xshift
-  real :: y1,y2,ysq, xtmp,ytmp, dy
+  real :: y1,y2,ysq, xtmp,ytmp, dy, xmapl,xmapr
   logical :: ce
   
   external :: rline
@@ -608,19 +610,19 @@ subroutine plot_binary(itel)
   const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
   if(ce) const1 = const1 - CEconst  ! CE
   
-  xpl(1) = rlef(itel)    ! Left limit of Rl
+  xpl(1)   = rlef(itel)  ! Left limit of Rl
   xpl(npl) = rrig(itel)  ! Right limit of Rl
-  ypl(1) = 0.            
+  ypl(1)   = 0.            
   ypl(npl) = 0.          
   
   
   nl   = npl/2-1
   xacc = 1.e-4
   
+  
   ! Compute left lobe:
-  dxl  = (x-xpl(1))/real(nl)
   do il = 2,nl
-     xl = xpl(1) + real(il-1)*dxl
+     xl = xmapl(il,nl,x,xpl(1))  ! Map x-points more densely near outer Rl limit
      
      xsq = xl*xl
      onexsq = (1.-xl)**2
@@ -637,9 +639,8 @@ subroutine plot_binary(itel)
   ypl(nl+1) = 0.
   
   ! Compute right lobe:
-  dxr = (xpl(npl)-x)/real(nl+1)
   do il = 2,nl+1
-     xl = xpl(nl+1) + real(il-1)*dxr
+     xl = xmapr(il,nl,x,xpl(npl))  ! Map x-points more densely near outer Rl limit
      
      xsq = xl*xl
      onexsq = (1.-xl)**2
@@ -670,7 +671,8 @@ subroutine plot_binary(itel)
   end do
   
   
-  if(.not.ce) then  ! Plot left star/disc:
+  ! Plot left star/disc:
+  if(.not.ce) then
      if(rad1(itel).gt.1.e5) then  ! Rl filling
         call pgsci(15)
         if(use_colour) call pgsci(2)  ! red
@@ -691,6 +693,7 @@ subroutine plot_binary(itel)
   end if
   
   
+  ! Plot CE:
   if(ce) then  
      ! Make sure Rl contour does not go through L1 point:
      xtmp = xpl(nl+1)
@@ -720,7 +723,8 @@ subroutine plot_binary(itel)
   end if
   
   
-  if(.not.ce) then  ! Plot right star/disc:
+  ! Plot right star/disc:
+  if(.not.ce) then
      if(rad2(itel).gt.1.e5) then  ! Rl filling
         do il=1,nl+2
            xpl(il)  = xpl(il+nl)
@@ -750,14 +754,15 @@ subroutine plot_binary(itel)
   if(ce) then
      call pgcirc(xshift+asep,yshift,ysize*0.002)  ! Plot core
      
-     ! Make sure Rl contour doesn't go through L1 point:
-     ytmp = ypl(nl+1)
-     ypl(nl+1)  = ypl(nl)
-     ypl2(nl+1) = ypl2(nl)
+     ! Make sure Rl contour doesn't go through L1 point: - not needed when not plotting right Rl (again)
+     !ytmp = ypl(nl+1)
+     !ypl(nl+1)  = ypl(nl)
+     !ypl2(nl+1) = ypl2(nl)
   end if
   
   
-  if(.not.ce) then  ! Plot right Roche lobe:
+  ! Plot right Roche lobe:
+  if(.not.ce) then
      call pgline(nl+2,xpl,ypl)
      call pgline(nl+2,xpl,ypl2)
   end if
@@ -784,13 +789,61 @@ subroutine plot_binary(itel)
   
   do k=1,klabel
      if(k.eq.5) then
-        call pgptxt(xtl(k),yshift,0.,0.0,trim(label(k)))  ! Align left
+        call pgptxt(xtl(k),yshift, 0.,0.0, trim(label(k)))  ! Align left
      else
-        call pgptxt(xtl(k),yshift,0.,0.5,trim(label(k)))  ! Align centre
+        call pgptxt(xtl(k),yshift, 0.,0.5, trim(label(k)))  ! Align centre
      endif
   end do
   
   ! call pgtext(xaa,yshift,yaa(itel))
   
 end subroutine plot_binary
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Map the x-array to plot a left-hand Roche lobe
+!!
+!! \param il      Current point number in array (1-nl)
+!! \param nl      Total number of points in array
+!! \param l1      L1 position
+!! \param llim    Left-most extent of Roche lobe
+!!
+!! \retval xmapl  Mapped position of il-th x value
+
+function xmapl(il,nl, l1,llim)
+  implicit none
+  integer, intent(in) :: il, nl
+  real, intent(in) :: l1,llim
+  real :: xmapl, pio2
+  
+  pio2 = 2*atan(1.)   ! pi/2
+  
+  xmapl = (1.0-cos(real(il-1)/real(nl)*pio2))*(l1-llim) + llim
+  
+end function xmapl
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Map the x-array to plot a right-hand Roche lobe
+!!
+!! \param il      Current point number in array (1-nl)
+!! \param nl      Total number of points in array
+!! \param l1      L1 position
+!! \param rlim    Right-most extent of Roche lobe
+!!
+!! \retval xmapr  Mapped position of il-th x value
+
+function xmapr(il,nl, l1,rlim)
+  implicit none
+  integer, intent(in) :: il, nl
+  real, intent(in) :: l1,rlim
+  real :: xmapr, pio2
+  
+  pio2 = 2*atan(1.)   ! pi/2
+  
+  xmapr = cos((1.0-real(il-1)/real(nl+1))*pio2) * (rlim-l1) + l1
+  
+end function xmapr
 !***********************************************************************************************************************************
