@@ -623,8 +623,6 @@ subroutine plot_binary(itel)
   xpl(nl+1) = x
   ypl(nl+1) = 0.
   
-  print*,const,const2
-  
   ! Compute right lobe:
   dxr = (xpl(npl)-x)/real(nl+1)
   do il = 2,nl+1
