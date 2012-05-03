@@ -47,9 +47,11 @@ end module plot_settings
 !> \brief  Contains Roche-lobe data
 
 module roche
+  use input_data, only: ng
   implicit none
+  private :: ng
   
-  real :: q,q11, const1,const2,CEconst, xsq,onexsq
+  real :: q,q11, const1,const2,CEdiff(ng), xsq,onexsq
   
 end module roche
 !***********************************************************************************************************************************
@@ -76,7 +78,6 @@ program rocheplot
   
   use input_data, only: klabel, label,csep,iscr,xtl,title,blen,ktel, hei, text,xt,yt
   use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, xlen,yshift
-  use roche, only: CEconst
   
   implicit none
   
@@ -101,8 +102,6 @@ program rocheplot
   sunm  = 1.989e33
   sunr  = 6.96e10
   pi    = 3.1415926
-  
-  CEconst = 0.1  ! constant to subtract from potential in case of a CE; <~0.1
   
   ! Constant for orbital separation from mass and orbital period:
   csep= ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
@@ -418,7 +417,7 @@ end function rtsafe
 subroutine read_input_file(inputfile)
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
-  use roche, only: q,q11, const1,CEconst
+  use roche, only: q,q11, const1,CEdiff
   
   implicit none
   character, intent(in) :: inputfile*(*)
@@ -490,9 +489,13 @@ subroutine read_input_file(inputfile)
      end if
      
      
+     ! Compute the potential difference to subtract from the Roche potential for CE plots:
+     CEdiff(itel) = 0.33/q
+     if(q.lt.1) CEdiff(itel) = 0.33*q
+     
      ! Calculate limits of lobes (before shift):
      const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
-     if(min(rad1(itel),rad2(itel)).gt.1.e5) const1 = const1 - CEconst  ! CE
+     if(min(rad1(itel),rad2(itel)).gt.1.e5) const1 = const1 - CEdiff(itel)    ! CE
      
      xacc = 1.e-4
      x1 = 1.5 - 0.5*x
@@ -608,7 +611,7 @@ subroutine plot_binary(itel)
   if(min(rad1(itel),rad2(itel)).gt.1.e5) ce = .true.
   
   const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
-  if(ce) const1 = const1 - CEconst  ! CE
+  if(ce) const1 = const1 - CEdiff(itel)  ! CE
   
   xpl(1)   = rlef(itel)  ! Left limit of Rl
   xpl(npl) = rrig(itel)  ! Right limit of Rl
