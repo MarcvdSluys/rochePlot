@@ -87,7 +87,7 @@ program rocheplot
   implicit none
   integer :: i,itel, command_argument_count
   real :: gravc,sunm,sunr,twopi
-  character :: inputfile*(50)  !,yaa(8)
+  character :: inputfile*(50)
   
   
   use_colour = .false.
@@ -95,9 +95,6 @@ program rocheplot
   
   ! Column headers:
   label = [character(len=50) :: 'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', 'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', '']
-  
-  ! Figure labels:
-  !yaa = [character :: 'c','d','e','f','g','h','g','h']
   
   
   ! Constant for orbital separation from mass and orbital period:
@@ -133,7 +130,7 @@ program rocheplot
   
   
   
-  
+  ! Finish plot:
   
   ! Plot scale bar:
   call plot_scale_bar()
@@ -732,8 +729,6 @@ subroutine plot_binary(itel)
         call pgptxt(xtl(k),yshift, 0.,0.5, trim(label(k)))  ! Align centre
      endif
   end do
-  
-  ! call pgtext(xaa,yshift,yaa(itel))
   
 end subroutine plot_binary
 !***********************************************************************************************************************************
