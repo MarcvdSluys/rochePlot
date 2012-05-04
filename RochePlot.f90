@@ -1,4 +1,4 @@
-!> \file  rocheplot.f90  Plots Roche lobes for given set of binaries
+!> \file  RochePlot.f90  Plots Roche lobes for given set of binaries
 !!
 !!  \mainpage RochePlot documentation
 !!  RochePlot is a Fortran code using PGPlot to plot a series of binaries to illustrate the key moments in the evolution of a
@@ -90,12 +90,12 @@ program rocheplot
   character :: inputfile*(50)
   
   
-  use_colour = .false.
-  use_colour = .true.
+  !*** Initialise code:
+  use_colour = .false.  ! B/W
+  use_colour = .true.   ! Use colour
   
   ! Column headers:
   label = [character(len=50) :: 'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', 'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', '']
-  
   
   ! Constant for orbital separation from mass and orbital period:
   gravc = 6.668e-8      ! G
@@ -105,7 +105,7 @@ program rocheplot
   csep = ((24.*3600./twopi)**2 * gravc*sunm)**(1./3.) / sunr
   
   
-  ! Read command-line parameters:
+  !*** Read command-line parameters, set input and output filenames:
   inputfile = 'input.dat'
   outputfile = 'rochelobes.eps'
   if(command_argument_count().eq.1) then
@@ -115,30 +115,28 @@ program rocheplot
   end if
   
   
-  ! Read the lines of the input file containting evolutionary states:
+  !*** Read the input file:
   call read_input_file(trim(inputfile))
   
   
-  ! Initialise plot output; open output file, set page, create a white background, print plot title and column headers:
+  !*** Initialise plot output; open output file, set page, create a white background, print plot title and column headers:
   call initialise_plot()
   
   
-  ! Plot the different binaries:
+  !*** Plot the different binaries:
   do itel=1,ktel
      call plot_binary(itel)  ! Plot each binary; Roche lobes, stars and labels
   end do  ! do itel = 1,ktel
   
   
   
-  ! Finish plot:
+  !*** Finish plot:
   
   ! Plot scale bar:
   call plot_scale_bar()
   
-  
   ! Plot axis of rotation:
   call plot_rotation_axis()
-  
   
   ! Add texts, if necessary:
   if(xt.ne.0.) call pgtext(xt,yt,text)
