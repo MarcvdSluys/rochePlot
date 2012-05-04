@@ -1,6 +1,11 @@
 !> \file  rocheplot.f90  Plots Roche lobes for given set of binaries
-
-! (c) 2003-2012, Frank Verbunt, Marc van der Sluys
+!!
+!!  \mainpage RochePlot documentation
+!!  RochePlot is a Fortran code using PGPlot to plot a series of binaries to illustrate the key moments in the evolution of a
+!!  given binary.  The code was originally written by Frank Verbunt.
+!!
+!!  \par
+!!  (c) 2003-2012, Frank Verbunt, Marc van der Sluys
 
 
 !***********************************************************************************************************************************
@@ -24,8 +29,6 @@ module input_data
 end module input_data
 !***********************************************************************************************************************************
 
-
-
 !***********************************************************************************************************************************
 !> \brief  Contains plot settings
 
@@ -42,8 +45,6 @@ module plot_settings
 end module plot_settings
 !***********************************************************************************************************************************
 
-
-
 !***********************************************************************************************************************************
 !> \brief  Contains Roche-lobe data
 
@@ -59,24 +60,25 @@ end module roche
 
 
 
+
 !***********************************************************************************************************************************
 !> \brief  Plots Roche lobes for given binaries
+!!
+!! For each graph, read m1, m2, a, r1, r2:
+!! - m1, m2 = masses of left and right star, respectively
+!! - a      = distance between stars (in solar radii)
+!! - r1, r2 = radii of left and right stars in solar radii
+!!
+!! - if (r1,r2) > 1.e5 the Roche lobe is filled
+!! - if both stars fill their Roche lobes, a common envelope is assumed
+!! - if (r1,r2) < 0.   a circle with radius (r1,r2) + disc is drawn
+!!
+!! The plot is scaled automatically: 
+!! - first all required parameters are read
+!! - then lobe sizes and positions are estimated
+!! - finally, the individual graphs are made
 
 program rocheplot
-  
-  ! For each graph: m1, m2, a, r1, r2
-  ! m1, m2 = masses of left and right star, respectively
-  ! a      = distance between stars (in solar radii)
-  ! r1, r2 = radii of left and right stars in solar radii
-  !  if (r1,r2) > 1.e5 the rochelobe is filled
-  !  if (r1,r2) < 0.   a circle with radius (r1,r2) + disc is drawn
-  !
-  ! the plot is scaled automatically: to do this, first all
-  !  required parameters are read, and lobe sizes and positions
-  !  estimated
-  !
-  ! next, the individual graphs are made
-  
   use input_data, only: klabel, label,csep,iscr,xtl,title,ktel, text,xt,yt
   use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, yshift
   
@@ -252,7 +254,7 @@ end subroutine rlimit
 !***********************************************************************************************************************************
 !> \brief  Calculates value of y^2 for given x^2 value
 !!
-!! \param x   Position along binary axis
+!! \param y   Position along binary axis
 !! \param f   Position of Roche surface
 !! \param df  First derivative of f w.r.t. x
 
