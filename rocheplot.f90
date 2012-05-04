@@ -151,199 +151,6 @@ end program rocheplot
 
 
 
-
-
-
-
-
-
-
-!***********************************************************************************************************************************
-!> \brief  Calculates outer limit of Roche lobe
-!!
-!! \param x   Position along binary axis
-!! \param f   Roche potential
-!! \param df  First derivative of f w.r.t. x
-
-subroutine rlimit(x, f,df)
-  use roche, only: q,q11, const1
-  
-  implicit none
-  real, intent(in) :: x
-  real, intent(out) :: f,df
-  
-  real :: r1,r2,r3
-  
-  r1 = abs(x)
-  r2 = abs(1.-x)
-  r3 = abs(x-q11)
-  
-  f  = q/r1 + 1./r2 + 0.5*(1.+q)*r3**2 - const1
-  df = -q*x/r1**3 + (1.-x)/r2**3 + (1.+q)*(x-q11)
-  
-end subroutine rlimit
-!***********************************************************************************************************************************
-
-
-!***********************************************************************************************************************************
-!> \brief  Calculates value of y^2 for given x^2 value
-!!
-!! \param y   Position along binary axis
-!! \param f   Position of Roche surface
-!! \param df  First derivative of f w.r.t. x
-
-subroutine rline(y, f,df)
-  use roche, only: q, const2, xsq,onexsq
-  implicit none
-  real, intent(in) :: y
-  real, intent(out) :: f,df
-  
-  real :: r1,r2
-  
-  r1 = sqrt(y + xsq)
-  r2 = sqrt(y + onexsq)
-  
-  f  = q/r1 + 1./r2 + const2
-  df = -0.5*q/r1**3 - 0.5/r2**3
-  
-end subroutine rline
-!***********************************************************************************************************************************
-
-
-!***********************************************************************************************************************************
-!> \brief  Draw a circle
-!!
-!! \todo  Replace by pgcirc()?  -  Perhaps this looks nicer?
-
-subroutine cirkel(xc,yc,rad,n)
-  implicit none
-  real, intent(in) :: xc,yc,rad
-  integer, intent(in) :: n
-  
-  integer :: i
-  real :: x(n),y(n), step,phi
-  
-  step = 6.2831852/real(n-1)
-  
-  do i=1,n
-     phi  = real(i)*step
-     x(i) = xc + rad*cos(phi)
-     y(i) = yc + rad*sin(phi)
-  end do
-  
-  call pgpoly(n,x,y)
-  
-end subroutine cirkel
-!***********************************************************************************************************************************
-
-
-!***********************************************************************************************************************************
-!> \brief  Draws an accretion disc centered on xc,yc between rad and rlen
-
-subroutine plot_disc(xc,yc, rad,rlen)
-  implicit none
-  
-  real, intent(in) :: xc,yc,rad,rlen
-  real :: x(5),y(5), flare
-  
-  flare = 0.15  ! Disc's flare
-  
-  ! Draw right half:
-  x(1) = xc + rad
-  x(2) = x(1)
-  x(3) = xc + rlen
-  x(4) = x(3)
-  x(5) = x(1)
-  y(1) = yc + flare*rad
-  y(2) = yc - flare*rad
-  y(3) = yc - flare*rlen
-  y(4) = yc + flare*rlen
-  y(5) = y(1)
-  call pgpoly(5,x,y)
-  
-  ! Draw left half:
-  x(1) = xc - rad
-  x(2) = x(1)
-  x(3) = xc - rlen
-  x(4) = x(3)
-  x(5) = x(1)
-  y(5) = y(1)
-  call pgpoly(5,x,y)
-  
-end subroutine plot_disc
-!***********************************************************************************************************************************
-
-
-
-!***********************************************************************************************************************************
-!> \brief  Find the root of a function bracketed by x1,x2 using a combination of a Newton-Raphson and bisection methods
-!!
-!! \param funcd  User-provided function
-!! \param x1     Lower limit for solution
-!! \param x2     Upper limit for solution
-!! \param xacc   Desired accuracy for solution
-!!
-!! \see Numerical recipes, par.9.4 (p.258 / 359)
-
-function rtsafe(funcd, x1,x2, xacc)
-  implicit none
-  integer, parameter :: maxit=100
-  integer :: j
-  real, intent(in) :: x1,x2,xacc
-  real :: rtsafe, dx,dxold,xh,xl, f,df,fh,fl, swap,temp
-  
-  
-  call funcd(x1,fl,df)
-  call funcd(x2,fh,df)
-  if(fl*fh.ge.0.) write(0,'(2(A,2ES12.3))') ' rtsafe(): root must be bracketed:  x1,x2:',x1,x2, '  fl,fh:',fl,fh
-  if(fl.lt.0.) then
-     xl=x1
-     xh=x2
-  else
-     xh=x1
-     xl=x2
-     swap=fl
-     fl=fh
-     fh=swap
-  end if
-  
-  rtsafe = 0.5*(x1+x2)
-  dxold  = abs(x2-x1)
-  dx     = dxold
-  
-  call funcd(rtsafe,f,df)
-  
-  do j=1,maxit
-     if(((rtsafe-xh)*df-f)*((rtsafe-xl)*df-f).ge.0. .or. abs(2.*f).gt.abs(dxold*df) ) then
-        dxold = dx
-        dx = 0.5*(xh-xl)
-        rtsafe = xl+dx
-        if(xl.eq.rtsafe) return
-     else
-        dxold = dx
-        dx = f/df
-        temp = rtsafe
-        rtsafe = rtsafe-dx
-        if(temp.eq.rtsafe) return
-     end if
-     if(abs(dx).lt.xacc) return
-     call funcd(rtsafe,f,df)
-     if(f.lt.0.) then
-        xl = rtsafe
-        fl = f
-     else
-        xh = rtsafe
-        fh = f
-     end if
-  end do
-  
-  write(0,'(A)')' rtsafe() exceeded maximum number of iterations'
-  
-end function rtsafe
-!***********************************************************************************************************************************
-
-
-
 !***********************************************************************************************************************************
 !> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
 
@@ -497,7 +304,63 @@ end subroutine read_input_file
 !***********************************************************************************************************************************
 
 
+!***********************************************************************************************************************************
+!> \brief  Initialise plot output; open output file, set page, create a white background, print plot title and column headers
+
+subroutine initialise_plot()
+  use input_data, only: klabel, label,iscr,xtl,title
+  use plot_settings, only: use_colour, xleft,xrigh,ysize,ymargin, outputfile, lw
   
+  implicit none
+  integer :: iaxis, kl
+  
+  ! the necessary parameters are read from file; all together,
+  !  to enable calculation of the overall size of the graph.
+  iaxis=-2  ! Draft: 0,  quality: -2
+  
+  
+  if(iscr.eq.0) then
+     write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
+     if(use_colour) then
+        call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
+     else
+        call pgbegin(0,''//trim(outputfile)//'/ps',1,1)
+     end if
+     lw = 2
+     call pgscf(1)
+  else
+     call pgbegin(1,'/xs',1,1)
+     lw = 1
+  end if
+  
+  
+  if(iscr.eq.1.or.iscr.eq.2) call pgwhitebg()  ! Create a white background when plotting to screen; swap fg/bg colours
+  call pgsfs(1)
+  call pgslw(lw)
+  
+  call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
+  call pgsci(1)
+  
+  
+  ! Print plot title:
+  if(title(1:10).ne.'          ') then
+     call pgsch(1.5)
+     call pgslw(3*lw)
+     call pgptxt(0.,-3*ymargin,0.,0.5,trim(title))
+     call pgsch(1.)
+  end if
+  
+  
+  ! Print column headers:
+  call pgslw(2*lw)
+  do kl=1,klabel
+     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
+  end do
+  call pgslw(lw)
+  
+end subroutine initialise_plot
+!***********************************************************************************************************************************
+
 !***********************************************************************************************************************************
 !> \brief  Create a white background when plotting to screen; swap black (ci=0) and white (ci=1)
 
@@ -514,6 +377,87 @@ subroutine pgwhitebg()
 
 end subroutine pgwhitebg
 !***********************************************************************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+!***********************************************************************************************************************************
+!> \brief  Draw a circle
+!!
+!! \todo  Replace by pgcirc()?  -  Perhaps this looks nicer?
+
+subroutine plot_circle(xc,yc,rad,n)
+  implicit none
+  real, intent(in) :: xc,yc,rad
+  integer, intent(in) :: n
+  
+  integer :: i
+  real :: x(n),y(n), step,phi
+  
+  step = 6.2831852/real(n-1)
+  
+  do i=1,n
+     phi  = real(i)*step
+     x(i) = xc + rad*cos(phi)
+     y(i) = yc + rad*sin(phi)
+  end do
+  
+  call pgpoly(n,x,y)
+  
+end subroutine plot_circle
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Draws an accretion disc centered on xc,yc between rad and rlen
+
+subroutine plot_disc(xc,yc, rad,rlen)
+  implicit none
+  
+  real, intent(in) :: xc,yc,rad,rlen
+  real :: x(5),y(5), flare
+  
+  flare = 0.15  ! Disc's flare
+  
+  ! Draw right half:
+  x(1) = xc + rad
+  x(2) = x(1)
+  x(3) = xc + rlen
+  x(4) = x(3)
+  x(5) = x(1)
+  y(1) = yc + flare*rad
+  y(2) = yc - flare*rad
+  y(3) = yc - flare*rlen
+  y(4) = yc + flare*rlen
+  y(5) = y(1)
+  call pgpoly(5,x,y)
+  
+  ! Draw left half:
+  x(1) = xc - rad
+  x(2) = x(1)
+  x(3) = xc - rlen
+  x(4) = x(3)
+  x(5) = x(1)
+  y(5) = y(1)
+  call pgpoly(5,x,y)
+  
+end subroutine plot_disc
+!***********************************************************************************************************************************
+
+
+
+
+
+
+
+
 
 
 !***********************************************************************************************************************************
@@ -623,7 +567,7 @@ subroutine plot_binary(itel)
            call plot_disc(xshift,yshift,rad,radd)
            call pgsci(1)
         end if
-        call cirkel(xshift,yshift,max(abs(rad),ysize*0.002),40)
+        call plot_circle(xshift,yshift,max(abs(rad),ysize*0.002),40)
      end if
   end if
   
@@ -681,7 +625,7 @@ subroutine plot_binary(itel)
            call pgsci(1)
         end if
         
-        call cirkel(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
+        call plot_circle(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
      end if
   end if
   
@@ -733,7 +677,6 @@ subroutine plot_binary(itel)
 end subroutine plot_binary
 !***********************************************************************************************************************************
 
-
 !***********************************************************************************************************************************
 !> \brief  Map the x-array to plot a right-hand Roche lobe
 !!
@@ -764,6 +707,129 @@ function xmap(il,nl, l1,lim, lr)
   
 end function xmap
 !***********************************************************************************************************************************
+
+!***********************************************************************************************************************************
+!> \brief  Find the root of a function bracketed by x1,x2 using a combination of a Newton-Raphson and bisection methods
+!!
+!! \param funcd  User-provided function
+!! \param x1     Lower limit for solution
+!! \param x2     Upper limit for solution
+!! \param xacc   Desired accuracy for solution
+!!
+!! \see Numerical recipes, par.9.4 (p.258 / 359)
+
+function rtsafe(funcd, x1,x2, xacc)
+  implicit none
+  integer, parameter :: maxit=100
+  integer :: j
+  real, intent(in) :: x1,x2,xacc
+  real :: rtsafe, dx,dxold,xh,xl, f,df,fh,fl, swap,temp
+  
+  
+  call funcd(x1,fl,df)
+  call funcd(x2,fh,df)
+  if(fl*fh.ge.0.) write(0,'(2(A,2ES12.3))') ' rtsafe(): root must be bracketed:  x1,x2:',x1,x2, '  fl,fh:',fl,fh
+  if(fl.lt.0.) then
+     xl=x1
+     xh=x2
+  else
+     xh=x1
+     xl=x2
+     swap=fl
+     fl=fh
+     fh=swap
+  end if
+  
+  rtsafe = 0.5*(x1+x2)
+  dxold  = abs(x2-x1)
+  dx     = dxold
+  
+  call funcd(rtsafe,f,df)
+  
+  do j=1,maxit
+     if(((rtsafe-xh)*df-f)*((rtsafe-xl)*df-f).ge.0. .or. abs(2.*f).gt.abs(dxold*df) ) then
+        dxold = dx
+        dx = 0.5*(xh-xl)
+        rtsafe = xl+dx
+        if(xl.eq.rtsafe) return
+     else
+        dxold = dx
+        dx = f/df
+        temp = rtsafe
+        rtsafe = rtsafe-dx
+        if(temp.eq.rtsafe) return
+     end if
+     if(abs(dx).lt.xacc) return
+     call funcd(rtsafe,f,df)
+     if(f.lt.0.) then
+        xl = rtsafe
+        fl = f
+     else
+        xh = rtsafe
+        fh = f
+     end if
+  end do
+  
+  write(0,'(A)')' rtsafe() exceeded maximum number of iterations'
+  
+end function rtsafe
+!***********************************************************************************************************************************
+
+!***********************************************************************************************************************************
+!> \brief  Calculates outer limit of Roche lobe
+!!
+!! \param x   Position along binary axis
+!! \param f   Roche potential
+!! \param df  First derivative of f w.r.t. x
+
+subroutine rlimit(x, f,df)
+  use roche, only: q,q11, const1
+  
+  implicit none
+  real, intent(in) :: x
+  real, intent(out) :: f,df
+  
+  real :: r1,r2,r3
+  
+  r1 = abs(x)
+  r2 = abs(1.-x)
+  r3 = abs(x-q11)
+  
+  f  = q/r1 + 1./r2 + 0.5*(1.+q)*r3**2 - const1
+  df = -q*x/r1**3 + (1.-x)/r2**3 + (1.+q)*(x-q11)
+  
+end subroutine rlimit
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Calculates value of y^2 for given x^2 value
+!!
+!! \param y   Position along binary axis
+!! \param f   Position of Roche surface
+!! \param df  First derivative of f w.r.t. x
+
+subroutine rline(y, f,df)
+  use roche, only: q, const2, xsq,onexsq
+  implicit none
+  real, intent(in) :: y
+  real, intent(out) :: f,df
+  
+  real :: r1,r2
+  
+  r1 = sqrt(y + xsq)
+  r2 = sqrt(y + onexsq)
+  
+  f  = q/r1 + 1./r2 + const2
+  df = -0.5*q/r1**3 - 0.5/r2**3
+  
+end subroutine rline
+!***********************************************************************************************************************************
+
+
+
+
+
 
 
 !***********************************************************************************************************************************
@@ -796,64 +862,6 @@ end subroutine plot_scale_bar
 !***********************************************************************************************************************************
 
 !***********************************************************************************************************************************
-!> \brief  Initialise plot output; open output file, set page, create a white background, print plot title and column headers
-
-subroutine initialise_plot()
-  use input_data, only: klabel, label,iscr,xtl,title
-  use plot_settings, only: use_colour, xleft,xrigh,ysize,ymargin, outputfile, lw
-  
-  implicit none
-  integer :: iaxis, kl
-  
-  ! the necessary parameters are read from file; all together,
-  !  to enable calculation of the overall size of the graph.
-  iaxis=-2  ! Draft: 0,  quality: -2
-  
-  
-  if(iscr.eq.0) then
-     write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
-     if(use_colour) then
-        call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
-     else
-        call pgbegin(0,''//trim(outputfile)//'/ps',1,1)
-     end if
-     lw = 2
-     call pgscf(1)
-  else
-     call pgbegin(1,'/xs',1,1)
-     lw = 1
-  end if
-  
-  
-  if(iscr.eq.1.or.iscr.eq.2) call pgwhitebg()  ! Create a white background when plotting to screen; swap fg/bg colours
-  call pgsfs(1)
-  call pgslw(lw)
-  
-  call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
-  call pgsci(1)
-  
-  
-  ! Print plot title:
-  if(title(1:10).ne.'          ') then
-     call pgsch(1.5)
-     call pgslw(3*lw)
-     call pgptxt(0.,-3*ymargin,0.,0.5,trim(title))
-     call pgsch(1.)
-  end if
-  
-  
-  ! Print column headers:
-  call pgslw(2*lw)
-  do kl=1,klabel
-     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
-  end do
-  call pgslw(lw)
-  
-end subroutine initialise_plot
-!***********************************************************************************************************************************
-
-
-!***********************************************************************************************************************************
 !> \brief  Plot axis of rotation for the binaries
 
 subroutine plot_rotation_axis()
@@ -875,3 +883,4 @@ subroutine plot_rotation_axis()
   
 end subroutine plot_rotation_axis
 !***********************************************************************************************************************************
+
