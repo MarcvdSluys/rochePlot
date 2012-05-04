@@ -50,14 +50,14 @@ end module plot_settings
 !***********************************************************************************************************************************
 !> \brief  Contains Roche-lobe data
 
-module roche
+module roche_data
   use input_data, only: ng
   implicit none
   private :: ng
   
   real :: q,q11, const1,const2,CEdiff(ng), xsq,onexsq
   
-end module roche
+end module roche_data
 !***********************************************************************************************************************************
 
 
@@ -157,7 +157,7 @@ end program rocheplot
 subroutine read_input_file(inputfile)
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
-  use roche, only: q,q11, const1,CEdiff
+  use roche_data, only: q,q11, const1,CEdiff
   
   implicit none
   character, intent(in) :: inputfile*(*)
@@ -468,7 +468,7 @@ end subroutine plot_disc
 subroutine plot_binary(itel)
   use input_data, only: npl, age_mc, rm1,rm2,rsep,rlag,rlef,rrig,hei,rad1,rad2,klabel,label,ktel,txt, pb,xtl, ce
   use plot_settings, only: xpl,ypl,ypl2, use_colour, ysize,ymargin, yshift
-  use roche
+  use roche_data, only: q,q11, const1,const2,CEdiff, xsq,onexsq
   
   implicit none
   integer, intent(in) :: itel
@@ -783,7 +783,7 @@ end function rtsafe
 !! \param df  First derivative of f w.r.t. x
 
 subroutine rlimit(x, f,df)
-  use roche, only: q,q11, const1
+  use roche_data, only: q,q11, const1
   
   implicit none
   real, intent(in) :: x
@@ -810,7 +810,7 @@ end subroutine rlimit
 !! \param df  First derivative of f w.r.t. x
 
 subroutine rline(y, f,df)
-  use roche, only: q, const2, xsq,onexsq
+  use roche_data, only: q, const2, xsq,onexsq
   implicit none
   real, intent(in) :: y
   real, intent(out) :: f,df
