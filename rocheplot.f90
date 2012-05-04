@@ -171,7 +171,7 @@ subroutine read_input_file(inputfile)
   
   
   ! Open input file:
-  write(*,'(A,/)') ' Reading input file: '//trim(inputfile)
+  write(*,'(/,A,/)') ' Reading input file: '//trim(inputfile)
   open(unit=10,form='formatted',status='old',file=trim(inputfile))
   
   read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
@@ -251,7 +251,7 @@ subroutine read_input_file(inputfile)
      rlef(ktel) = rtsafe(rlimit, x1,x2, xacc)  ! Left limit
      
      
-     write(*,'(A,4G12.3)') ' Roche limits: ', rlef(ktel), rlag(ktel), rrig(ktel), hei(ktel)
+     write(*,'(A,I3,A1,4G12.3)') ' Roche limits binary',ktel,':', rlef(ktel), rlag(ktel), rrig(ktel), hei(ktel)
      
      
      ! Calculate limits after enlarging and shift, and keep track of minima and maxima:
