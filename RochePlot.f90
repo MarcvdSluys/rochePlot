@@ -107,7 +107,7 @@ program rocheplot
   
   !*** Read command-line parameters, set input and output filenames:
   inputfile = 'input.dat'
-  outputfile = 'rochelobes.eps'
+  outputfile = 'RocheLobes.eps'
   if(command_argument_count().eq.1) then
      call get_command_argument(1, inputfile)
      i = index(inputfile,'.dat', back=.true.)                      ! Find last dot in input file name
@@ -407,7 +407,7 @@ subroutine plot_circle(xc,yc,rad,n)
      y(i) = yc + rad*sin(phi)
   end do
   
-  call pgpoly(n,x,y)
+  call pgpoly(n, x,y)
   
 end subroutine plot_circle
 !***********************************************************************************************************************************
@@ -416,35 +416,40 @@ end subroutine plot_circle
 !***********************************************************************************************************************************
 !> \brief  Draws an accretion disc centered on xc,yc between rad and rlen
 
-subroutine plot_disc(xc,yc, rad,rlen)
+subroutine plot_disc(xL1, xc,yc, rad,rlen)
   implicit none
   
-  real, intent(in) :: xc,yc,rad,rlen
-  real :: x(5),y(5), flare
+  real, intent(in) :: xL1, xc,yc, rad,rlen
+  real :: x(5),y(5), flare, sign
   
   flare = 0.15  ! Disc's flare
   
   ! Draw right half:
-  x(1) = xc + rad
-  x(2) = x(1)
-  x(3) = xc + rlen
-  x(4) = x(3)
+  x(1:2) = xc + rad
+  x(3:4) = xc + rlen
   x(5) = x(1)
+  
   y(1) = yc + flare*rad
   y(2) = yc - flare*rad
   y(3) = yc - flare*rlen
   y(4) = yc + flare*rlen
   y(5) = y(1)
+  
   call pgpoly(5,x,y)
   
+  
   ! Draw left half:
-  x(1) = xc - rad
-  x(2) = x(1)
-  x(3) = xc - rlen
-  x(4) = x(3)
+  x(1:2) = xc - rad
+  x(3:4) = xc - rlen
   x(5) = x(1)
-  y(5) = y(1)
+  
   call pgpoly(5,x,y)
+  
+  
+  ! Draw accretion stream:
+  sign = 1.
+  if(abs(xc).gt.0.) sign = xc/abs(xc)
+  call pgline(2, (/xL1,xc-rlen*sign/), (/yc,yc/))
   
 end subroutine plot_disc
 !***********************************************************************************************************************************
@@ -472,7 +477,7 @@ subroutine plot_binary(itel)
   integer, intent(in) :: itel
   integer :: il,pl,k,nl
   real :: asep, rad,radd,swap, rtsafe
-  real :: x,xacc,xl,xm1,xm2, xmult,xshift
+  real :: xL1,xacc,xl,xm1,xm2, xmult,xshift
   real :: y1,y2,ysq, xtmp,ytmp, dy, xmap
   
   external :: rline
@@ -480,11 +485,11 @@ subroutine plot_binary(itel)
   xm1 = rm1(itel)     ! M1
   xm2 = rm2(itel)     ! M2
   asep = rsep(itel)   ! Orbital separation
-  x = rlag(itel)      ! Inner Lagrangian point
+  xL1 = rlag(itel)    ! Inner Lagrangian point
   q = xm1/xm2         ! q1
   q11 = 1./(1.+q)     ! M2/Mtot
   
-  const1 = q/x + 1./(1.-x) + 0.5*(1.+q)*(x-q11)**2
+  const1 = q/xL1 + 1./(1.-xL1) + 0.5*(1.+q)*(xL1-q11)**2
   if(ce(itel)) const1 = const1 - CEdiff(itel)  ! CE
   
   xpl(1)   = rlef(itel)  ! Left limit of Rl
@@ -499,32 +504,32 @@ subroutine plot_binary(itel)
   
   ! Compute left lobe:
   do il = 2,nl
-     xl = xmap(il,nl, x,xpl(1), 1)  ! Map x-points more densely near outer Rl limit; 1=left
+     xl = xmap(il,nl, xL1,xpl(1), 1)  ! Map x-points more densely near outer Rl limit; 1=left
      
      xsq = xl*xl
      onexsq = (1.-xl)**2
      const2 = 0.5*(1.+q)*(xl-q11)**2 - const1
      
      y1 = 0.
-     y2 = x**2
+     y2 = xL1**2
      ysq = rtsafe(rline,y1,y2,xacc)
      
      xpl(il) = xl
      ypl(il) = sqrt(ysq)
   end do
-  xpl(nl+1) = x
+  xpl(nl+1) = xL1
   ypl(nl+1) = 0.
   
   ! Compute right lobe:
   do il = 2,nl+1
-     xl = xmap(il,nl, x,xpl(npl), 2)  ! Map x-points more densely near outer Rl limit; 2=right
+     xl = xmap(il,nl, xL1,xpl(npl), 2)  ! Map x-points more densely near outer Rl limit; 2=right
      
      xsq = xl*xl
      onexsq = (1.-xl)**2
      const2 = 0.5*(1.+q)*(xl-q11)**2 - const1
      
      y1 = 0.
-     y2 = (1.0-x)**2
+     y2 = (1.0-xL1)**2
      ysq = rtsafe(rline,y1,y2,xacc)
      
      xpl(nl+il) = xl
@@ -553,19 +558,21 @@ subroutine plot_binary(itel)
      if(rad1(itel).gt.1.e5) then  ! Rl filling
         call pgsci(15)
         if(use_colour) call pgsci(2)  ! red
-        call pgpoly(nl+1, xpl, ypl)    ! Bottom half
+        call pgpoly(nl+1, xpl, ypl)   ! Bottom half
         call pgpoly(nl+1, xpl, ypl2)  ! Top half
         call pgsci(1)
      else
         rad = rad1(itel)
-        if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then
-           radd = 0.7*asep*x
+        rad = max(abs(rad),ysize*0.002)
+        if(rad2(itel).gt.1.e5.and.rad1(itel).gt.0.) then  ! Plot an accretion disc
+           radd = 0.7*asep*xL1
            call pgsci(15)
            if(use_colour) call pgsci(5)  ! light blue
-           call plot_disc(xshift,yshift,rad,radd)
+           call plot_disc(xshift+xL1*asep, xshift,yshift, 4*rad,radd)
            call pgsci(1)
         end if
-        call plot_circle(xshift,yshift,max(abs(rad),ysize*0.002),40)
+        
+        call plot_circle(xshift,yshift, max(abs(rad),ysize*0.002), 40)  ! Plot the star
      end if
   end if
   
@@ -581,13 +588,14 @@ subroutine plot_binary(itel)
      ypl2(nl+1) = ypl2(nl)
      
      ! Plot both Roche lobe(s):
-     call pgsci(2)
+     call pgsci(15)
+     if(use_colour) call pgsci(2)
      dy = ysize*0.0005               ! Create some overlap between the two halves
      call pgpoly(npl,xpl,ypl  - dy)  ! RL Bottom
      call pgpoly(npl,xpl,ypl2 + dy)  ! RL Top
      
      call pgsci(1)
-     call pgcirc(xshift,yshift,ysize*0.002)  ! Core
+     call pgcirc(xshift,yshift,ysize*0.002)  ! Plot core
   end if
   
   call pgline(npl,xpl,ypl)   ! RL bottom contour
@@ -615,20 +623,22 @@ subroutine plot_binary(itel)
         call pgsci(1)
      else
         rad = rad2(itel)
-        if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then
-           radd = 0.7*asep*(1.-x)
+        rad = max(abs(rad),ysize*0.002)
+        if(rad1(itel).gt.1.e5.and.rad2(itel).gt.0.) then  ! Plot an accretion disc
+           radd = 0.7*asep*(1.-xL1)
            call pgsci(15)
            if(use_colour) call pgsci(5)  ! light blue
-           call plot_disc(xshift+asep,yshift,rad,radd)
+           call plot_disc(xshift+xL1*asep, xshift+asep,yshift, 4*rad,radd)
            call pgsci(1)
         end if
         
-        call plot_circle(xshift+asep,yshift,max(abs(rad),ysize*0.002),40)
+        call plot_circle(xshift+asep,yshift,rad, 40)  ! Plot the star
      end if
   end if
   
   
   if(ce(itel)) then
+     call pgsci(1)
      call pgcirc(xshift+asep,yshift,ysize*0.002)  ! Plot core
      
      ! Make sure Rl contour doesn't go through L1 point: - not needed when not plotting right Rl (again)
