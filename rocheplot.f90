@@ -77,8 +77,8 @@ program rocheplot
   !
   ! next, the individual graphs are made
   
-  use input_data, only: klabel, label,csep,iscr,xtl,title,blen,ktel, hei, text,xt,yt
-  use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, xlen,yshift
+  use input_data, only: klabel, label,csep,iscr,xtl,title,ktel, text,xt,yt
+  use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, yshift
   
   implicit none
   
@@ -179,19 +179,7 @@ program rocheplot
   
   
   ! Plot scale bar:
-  xlen = real(blen)
-  xpl(2) = xlen/2.
-  xpl(1) = -xpl(2)
-  !yshift = yshift+hei(ktel) + 2*ymargin
-  yshift = yshift+hei(ktel) + 5*ymargin
-  ypl(1) = yshift
-  ypl(2) = ypl(1)
-  call pgline(2,xpl,ypl)
-  
-  
-  write(text,'(I5,"R\d\(2281)")') blen
-  !call pgtext(xpl(2),ypl(2),text)
-  call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
+  call plot_scale_bar()
   
   
   ! Plot axis of rotation:
@@ -841,4 +829,34 @@ function xmap(il,nl, l1,lim, lr)
   end if
   
 end function xmap
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Plot scale bar
+
+subroutine plot_scale_bar()
+  use input_data, only: blen, hei, ktel
+  use plot_settings, only: yshift, ymargin
+  
+  implicit none
+  real :: xlen,xpl(2),ypl(2)
+  character :: text*(99)
+  
+  xlen = real(blen)
+  xpl(2) = xlen/2.
+  xpl(1) = -xpl(2)
+  
+  !yshift = yshift + hei(ktel) + 2*ymargin
+  yshift = yshift + hei(ktel) + 5*ymargin
+  ypl(1) = yshift
+  ypl(2) = ypl(1)
+  
+  call pgline(2,xpl,ypl)
+  
+  ! Print label:
+  write(text,'(I5,"R\d\(2281)")') blen
+  call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
+  
+end subroutine plot_scale_bar
 !***********************************************************************************************************************************
