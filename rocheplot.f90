@@ -37,9 +37,11 @@ module plot_settings
   implicit none
   private :: npl
   
+  integer :: lw
   real :: xpl(npl),ypl(npl),ypl2(npl)
   real :: xleft,xrigh, ymargin, ysize
   real :: xlen,yshift
+  character :: outputfile*(50)
   logical :: use_colour
   
 end module plot_settings
@@ -79,17 +81,17 @@ end module roche
 !! - finally, the individual graphs are made
 
 program rocheplot
-  use input_data, only: klabel, label,csep,iscr,xtl,title,ktel, text,xt,yt
-  use plot_settings, only: xpl,ypl, use_colour, xleft,xrigh,ysize,ymargin, yshift
+  use input_data, only: label,csep,ktel, text,xt,yt
+  use plot_settings, only: xpl,ypl, use_colour, ymargin, yshift, outputfile
   
   implicit none
   
-  integer :: i,iaxis,itel,kl
+  integer :: i,itel
   
   real :: gravc,sunm,sunr,pi
   
-  integer :: command_argument_count, lw
-  character :: inputfile*(50),outputfile*(50)  !,yaa(8)
+  integer :: command_argument_count
+  character :: inputfile*(50)  !,yaa(8)
   
   use_colour = .false.
   use_colour = .true.
@@ -107,11 +109,7 @@ program rocheplot
   pi    = 3.1415926
   
   ! Constant for orbital separation from mass and orbital period:
-  csep= ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
-  
-  ! the necessary parameters are read from file; all together,
-  !  to enable calculation of the overall size of the graph.
-  iaxis=-2  ! Draft: 0,  quality: -2
+  csep = ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
   
   ! Read command-line variables:
   inputfile = 'input.dat'
@@ -123,52 +121,12 @@ program rocheplot
   end if
   
   
-  
   ! Read the lines of the input file containting evolutionary states:
   call read_input_file(trim(inputfile))
   
   
-  
-  
-  ! Initialise plot output:
-  if(iscr.eq.0) then
-     write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
-     if(use_colour) then
-        call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
-     else
-        call pgbegin(0,''//trim(outputfile)//'/ps',1,1)
-     end if
-     lw = 2
-     call pgscf(1)
-  else
-     call pgbegin(1,'/xs',1,1)
-     lw = 1
-  end if
-  
-  
-  if(iscr.eq.1.or.iscr.eq.2) call pgwhitebg()  ! Create a white background when plotting to screen; swap fg/bg colours
-  call pgsfs(1)
-  call pgslw(lw)
-  
-  call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
-  call pgsci(1)
-  
-  
-  ! Print column headers:
-  call pgslw(2*lw)
-  do kl=1,klabel
-     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
-  end do
-  
-  
-  ! Print plot title:
-  if(title(1:10).ne.'          ') then
-     call pgsch(1.5)
-     call pgslw(3*lw)
-     call pgptxt(0.,-3*ymargin,0.,0.5,trim(title))
-     call pgsch(1.)
-  end if
-  call pgslw(lw)
+  ! Initialise plot output; open output file, set page, create a white background, print plot title and column headers:
+  call initialise_plot()
   
   
   ! Plot the different binaries:
@@ -861,4 +819,61 @@ subroutine plot_scale_bar()
   call pgtext(xpl(2),ypl(2)+0.5*ymargin,text)
   
 end subroutine plot_scale_bar
+!***********************************************************************************************************************************
+
+!***********************************************************************************************************************************
+!> \brief  Initialise plot output; open output file, set page, create a white background, print plot title and column headers
+
+subroutine initialise_plot()
+  use input_data, only: klabel, label,iscr,xtl,title
+  use plot_settings, only: use_colour, xleft,xrigh,ysize,ymargin, outputfile, lw
+  
+  implicit none
+  integer :: iaxis, kl
+  
+  ! the necessary parameters are read from file; all together,
+  !  to enable calculation of the overall size of the graph.
+  iaxis=-2  ! Draft: 0,  quality: -2
+  
+  
+  if(iscr.eq.0) then
+     write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
+     if(use_colour) then
+        call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
+     else
+        call pgbegin(0,''//trim(outputfile)//'/ps',1,1)
+     end if
+     lw = 2
+     call pgscf(1)
+  else
+     call pgbegin(1,'/xs',1,1)
+     lw = 1
+  end if
+  
+  
+  if(iscr.eq.1.or.iscr.eq.2) call pgwhitebg()  ! Create a white background when plotting to screen; swap fg/bg colours
+  call pgsfs(1)
+  call pgslw(lw)
+  
+  call pgenv(xleft,xrigh,ysize,0., 1, iaxis)
+  call pgsci(1)
+  
+  
+  ! Print plot title:
+  if(title(1:10).ne.'          ') then
+     call pgsch(1.5)
+     call pgslw(3*lw)
+     call pgptxt(0.,-3*ymargin,0.,0.5,trim(title))
+     call pgsch(1.)
+  end if
+  
+  
+  ! Print column headers:
+  call pgslw(2*lw)
+  do kl=1,klabel
+     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
+  end do
+  call pgslw(lw)
+  
+end subroutine initialise_plot
 !***********************************************************************************************************************************
