@@ -82,16 +82,13 @@ end module roche
 
 program rocheplot
   use input_data, only: label,csep,ktel, text,xt,yt
-  use plot_settings, only: xpl,ypl, use_colour, ymargin, yshift, outputfile
+  use plot_settings, only: use_colour, outputfile
   
   implicit none
-  
-  integer :: i,itel
-  
-  real :: gravc,sunm,sunr,pi
-  
-  integer :: command_argument_count
+  integer :: i,itel, command_argument_count
+  real :: gravc,sunm,sunr,twopi
   character :: inputfile*(50)  !,yaa(8)
+  
   
   use_colour = .false.
   use_colour = .true.
@@ -102,16 +99,16 @@ program rocheplot
   ! Figure labels:
   !yaa = [character :: 'c','d','e','f','g','h','g','h']
   
-  ! Some physical constants:
-  gravc = 6.668e-8
-  sunm  = 1.989e33
-  sunr  = 6.96e10
-  pi    = 3.1415926
   
   ! Constant for orbital separation from mass and orbital period:
-  csep = ((24.*3600./2./pi)**2*gravc*sunm)**(1./3.)/sunr
+  gravc = 6.668e-8      ! G
+  sunm  = 1.989e33      ! Mo
+  sunr  = 6.96e10       ! Ro
+  twopi = 8.*atan(1.0)  ! 2pi
+  csep = ((24.*3600./twopi)**2 * gravc*sunm)**(1./3.) / sunr
   
-  ! Read command-line variables:
+  
+  ! Read command-line parameters:
   inputfile = 'input.dat'
   outputfile = 'rochelobes.eps'
   if(command_argument_count().eq.1) then
@@ -143,28 +140,10 @@ program rocheplot
   
   
   ! Plot axis of rotation:
-  xpl(1) = 0.
-  xpl(2) = 0.
-  ypl(1) = 0.
-  !ypl(2) = yshift+ymargin
-  ypl(2) = yshift-ymargin
-  
-  call pgsls(4)
-  call pgline(2,xpl,ypl)
-  call pgsls(1)
+  call plot_rotation_axis()
   
   
-  ! add texts, if necessary
-  !123   write(6,*)'give position (x,y) of text'
-  !      write(6,*)'x=0. means: no text to be added'
-  !      read(5,*)xt,yt
-  !      if(xt.ne.0.) then
-  !        write(6,*)'give text string'
-  !        read(5,'(A)') text
-  !        call pgtext(xt,yt,text)
-  !        goto 123
-  !      end if
-  
+  ! Add texts, if necessary:
   if(xt.ne.0.) call pgtext(xt,yt,text)
   
   call pgend
@@ -876,4 +855,28 @@ subroutine initialise_plot()
   call pgslw(lw)
   
 end subroutine initialise_plot
+!***********************************************************************************************************************************
+
+
+!***********************************************************************************************************************************
+!> \brief  Plot axis of rotation for the binaries
+
+subroutine plot_rotation_axis()
+  use plot_settings, only: yshift, ymargin
+  
+  implicit none
+  real :: xpl(2),ypl(2)
+  
+  xpl(1) = 0.
+  xpl(2) = 0.
+  ypl(1) = 0.
+  
+  !ypl(2) = yshift+ymargin
+  ypl(2) = yshift-ymargin
+  
+  call pgsls(4)
+  call pgline(2,xpl,ypl)
+  call pgsls(1)
+  
+end subroutine plot_rotation_axis
 !***********************************************************************************************************************************
