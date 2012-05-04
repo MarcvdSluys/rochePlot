@@ -151,6 +151,8 @@ end program rocheplot
 
 !***********************************************************************************************************************************
 !> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
+!!
+!! \param inputfile  Name of the input file
 
 subroutine read_input_file(inputfile)
   use input_data
@@ -387,60 +389,39 @@ end subroutine pgwhitebg
 
 
 !***********************************************************************************************************************************
-!> \brief  Draw a circle
+!> \brief  Draws an accretion disc centered on xc,yc between radin and radout
 !!
-!! \todo  Replace by pgcirc()?  -  Perhaps this looks nicer?
+!! \param xL1     Horizontal position of L1 point
+!! \param xc      Horizontal position of centre of disc
+!! \param yc      Vertical position of centre of disc
+!! \param radin   Inner radius of the disc
+!! \param radout  Outer radius of the disc
 
-subroutine plot_circle(xc,yc,rad,n)
-  implicit none
-  real, intent(in) :: xc,yc,rad
-  integer, intent(in) :: n
-  
-  integer :: i
-  real :: x(n),y(n), step,phi
-  
-  step = 6.2831852/real(n-1)
-  
-  do i=1,n
-     phi  = real(i)*step
-     x(i) = xc + rad*cos(phi)
-     y(i) = yc + rad*sin(phi)
-  end do
-  
-  call pgpoly(n, x,y)
-  
-end subroutine plot_circle
-!***********************************************************************************************************************************
-
-
-!***********************************************************************************************************************************
-!> \brief  Draws an accretion disc centered on xc,yc between rad and rlen
-
-subroutine plot_disc(xL1, xc,yc, rad,rlen)
+subroutine plot_disc(xL1, xc,yc, radin,radout)
   implicit none
   
-  real, intent(in) :: xL1, xc,yc, rad,rlen
+  real, intent(in) :: xL1, xc,yc, radin,radout
   real :: x(5),y(5), flare, sign
   
   flare = 0.15  ! Disc's flare
   
   ! Draw right half:
-  x(1:2) = xc + rad
-  x(3:4) = xc + rlen
+  x(1:2) = xc + radin
+  x(3:4) = xc + radout
   x(5) = x(1)
   
-  y(1) = yc + flare*rad
-  y(2) = yc - flare*rad
-  y(3) = yc - flare*rlen
-  y(4) = yc + flare*rlen
+  y(1) = yc + flare*radin
+  y(2) = yc - flare*radin
+  y(3) = yc - flare*radout
+  y(4) = yc + flare*radout
   y(5) = y(1)
   
   call pgpoly(5,x,y)
   
   
   ! Draw left half:
-  x(1:2) = xc - rad
-  x(3:4) = xc - rlen
+  x(1:2) = xc - radin
+  x(3:4) = xc - radout
   x(5) = x(1)
   
   call pgpoly(5,x,y)
@@ -449,7 +430,7 @@ subroutine plot_disc(xL1, xc,yc, rad,rlen)
   ! Draw accretion stream:
   sign = 1.
   if(abs(xc).gt.0.) sign = xc/abs(xc)
-  call pgline(2, (/xL1,xc-rlen*sign/), (/yc,yc/))
+  call pgline(2, (/xL1,xc-radout*sign/), (/yc,yc/))
   
 end subroutine plot_disc
 !***********************************************************************************************************************************
@@ -572,7 +553,7 @@ subroutine plot_binary(itel)
            call pgsci(1)
         end if
         
-        call plot_circle(xshift,yshift, max(abs(rad),ysize*0.002), 40)  ! Plot the star
+        call pgcirc(xshift,yshift, rad)  ! Plot the star
      end if
   end if
   
@@ -632,7 +613,7 @@ subroutine plot_binary(itel)
            call pgsci(1)
         end if
         
-        call plot_circle(xshift+asep,yshift,rad, 40)  ! Plot the star
+        call pgcirc(xshift+asep,yshift,rad)  ! Plot the star
      end if
   end if
   
