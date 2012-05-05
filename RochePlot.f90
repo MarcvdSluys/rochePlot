@@ -592,15 +592,10 @@ subroutine plot_binary(itel)
   ! Plot right star/disc:
   if(.not.ce(itel)) then
      if(rad2(itel).gt.1.e5) then  ! Rl filling
-        do il=1,nl+2
-           xpl(il)  = xpl(il+nl)
-           ypl(il)  = ypl(il+nl)
-           ypl2(il) = ypl2(il+nl)
-        end do
         call pgsci(15)
         if(use_colour) call pgsci(2)  ! red
-        call pgpoly(nl+2, xpl, ypl)   ! Bottom half
-        call pgpoly(nl+2, xpl, ypl2)  ! Top half
+        call pgpoly(nl+2, xpl(nl+1:2*nl+2), ypl(nl+1:2*nl+2))   ! Bottom half
+        call pgpoly(nl+2, xpl(nl+1:2*nl+2), ypl2(nl+1:2*nl+2))  ! Top half
         call pgsci(1)
      else
         rad = rad2(itel)
