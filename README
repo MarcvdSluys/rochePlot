@@ -1,0 +1,26 @@
+RochePlot plots Roche lobes for given evolutionary phases of a binary star
+
+
+RochePlot is a Fortran code using PGPlot to plot a series of binaries to 
+illustrate the key stages in the evolution of a binary star.  The code was 
+originally written by Frank Verbunt and further developed by Marc van der 
+Sluys.  The source code for RochePlot can be found at http://rocheplot.sourceforge.net
+
+(c) 1993-2012, Frank Verbunt, Marc van der Sluys
+
+
+This file is part of RochePlot.
+
+RochePlot is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+RochePlot is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with RochePlot.  If not, see http://www.gnu.org/licenses/.
+
