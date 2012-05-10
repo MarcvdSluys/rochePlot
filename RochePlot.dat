@@ -1,0 +1,35 @@
+# RochePlot.dat: default input file for RochePlot - rocheplot.sourceforge.net
+
+4               klabel: number of labels per line  (3 or 4, needs 5 or 6 columns in table below)
+5               nev: Number of evolutionary phases plotted (number of lines in table below)
+
+M1              M2              P               R1              R2              Mc/Age/...
+1.70            1.59            106.1           2.85            1.80            0.
+1.70            1.59            106.1           1.              1000000.        1.94
+0.37            1.59            371.4           0.1             1.80            1.94
+0.37            1.59            371.4           1000000.        1000000.        2.39
+0.37            0.46            1.407           0.1             0.1             2.54
+
+0               iscr: 0-plot to eps file, 1-to screen
+100             ilen: length of scale bar (integer)
+
+-380.           xtl(1): x-position of M1
+250.            xtl(2): x-position of M2
+450.            xtl(3): x-position of P
+-600.           xtl(4): x-position of 4-th label (e.g. Mc or age)
+
+Age (Gyr)                                            label(4): name of label 4, f.i. M\dc\u(M\d\(2281)\u), 50 chars
+My binary                                            Title of the plot (50 chars)
+
+0.              xt: x-position of text (0: no text)
+0.              yt: y-position of text, next line: text (max 50 chars)
+
+
+# RochePlot.dat: default input file for RochePlot
+# See http://rocheplot.sourceforge.net for more information
+#
+# Formatting is important!
+# If R > 1e5: RLOF is assumed
+# If R < 0 for an accretor, no accretion disc is plottted
+# If RLOF is going on for both binary members, a common envelope is drawn (any resemblance to a peanut is accidental)
+

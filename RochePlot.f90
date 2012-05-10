@@ -1,11 +1,30 @@
-!> \file  RochePlot.f90  Plots Roche lobes for given set of binaries
+!> \file  RochePlot.f90  Plots Roche lobes for given evolutionary phases of a binary
 !!
 !!  \mainpage RochePlot documentation
-!!  RochePlot is a Fortran code using PGPlot to plot a series of binaries to illustrate the key moments in the evolution of a
-!!  given binary.  The code was originally written by Frank Verbunt.
+!!  RochePlot is a Fortran code using PGPlot to plot a series of binaries to illustrate the key stages in the evolution of a
+!!  binary star.  The code was originally written by Frank Verbunt and further developed by Marc van der Sluys.
 !!
 !!  \par
-!!  (c) 2003-2012, Frank Verbunt, Marc van der Sluys
+!!  This file is part of RochePlot.
+!!  
+!!  \par
+!!  RochePlot is free software: you can redistribute it and/or modify
+!!  it under the terms of the GNU General Public License as published by
+!!  the Free Software Foundation, either version 3 of the License, or
+!!  (at your option) any later version.
+!!  
+!!  \par
+!!  RochePlot is distributed in the hope that it will be useful,
+!!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!  GNU General Public License for more details.
+!!  
+!!  \par
+!!  You should have received a copy of the GNU General Public License
+!!  along with RochePlot.  If not, see http://www.gnu.org/licenses/.
+!!
+!!
+!!  (c) 1993-2012, Frank Verbunt, Marc van der Sluys
 
 
 !***********************************************************************************************************************************
@@ -24,7 +43,7 @@ module input_data
   real :: xtl(5), xt,yt
   logical :: ce(ng)
   
-  character :: txt(ng)*(50), label(5)*(50), text*(50), title*(50)
+  character :: txt(ng)*(50), label(5)*(50), text*(50), title*(50), programname*(199)
   
 end module input_data
 !***********************************************************************************************************************************
@@ -85,7 +104,7 @@ program rocheplot
   use plot_settings, only: use_colour, outputfile
   
   implicit none
-  integer :: i,itel, command_argument_count
+  integer :: in,itel, command_argument_count
   real :: gravc,sunm,sunr,twopi
   character :: inputfile*(50)
   
@@ -106,12 +125,13 @@ program rocheplot
   
   
   !*** Read command-line parameters, set input and output filenames:
-  inputfile = 'input.dat'
+  inputfile = 'RochePlot.dat'
   outputfile = 'RocheLobes.eps'
   if(command_argument_count().eq.1) then
      call get_command_argument(1, inputfile)
-     i = index(inputfile,'.dat', back=.true.)                      ! Find last dot in input file name
-     if(i.gt.0.and.i.lt.50) outputfile = inputfile(1:i-1)//'.eps'  ! When file.dat is input, use file.eps as output
+     in = index(inputfile,'.dat', back=.true.)  ! Find last dot in input file name
+     ! When file.dat is input, use RocheLobes_file.eps as output:
+     if(in.gt.0.and.in.lt.len(inputfile)) outputfile = 'RocheLobes_'//inputfile(1:in-1)//'.eps'
   end if
   
   
@@ -162,7 +182,7 @@ subroutine read_input_file(inputfile)
   implicit none
   character, intent(in) :: inputfile*(*)
   
-  integer :: io, itel, ki, nev
+  integer :: io, in, itel, ki, nev
   real :: asep, dfx,dx,fx, rtsafe
   real :: x,x1,x2,xacc,xright,xshift, xmargin, xmin,xmax
   character :: tmpstr
@@ -170,10 +190,26 @@ subroutine read_input_file(inputfile)
   external :: rlimit
   
   
-  ! Open input file:
-  write(*,'(/,A,/)') ' Reading input file: '//trim(inputfile)
-  open(unit=10,form='formatted',status='old',file=trim(inputfile))
+  ! Determine program name:
+  call get_command_argument(0, programname)
+  in = index(programname,'/',back=.true.)
+  if(in.ne.len(programname)) programname = programname(in+1:)
   
+  
+  ! Open input file:
+  open(unit=10,form='formatted',status='old',file=trim(inputfile), iostat=io)
+  
+  if(io.ne.0) then
+     write(0,'(/,A)') ' Error: file not found: '//trim(inputfile)
+     write(0,'(/,A)') ' '//trim(programname)//' needs an input file to run.  The default file name is RochePlot.dat.'
+     write(0,'(A)') ' Syntax: '//trim(programname)//' <input_file>'
+     write(0,'(/,A,/)') ' Aborting...'
+     stop
+  else
+     write(*,'(/,A,/)') ' '//trim(programname)//': opening input file '//trim(inputfile)
+  end if
+  
+  read(10,*) tmpstr
   read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
   read(10,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
   if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
@@ -291,7 +327,7 @@ subroutine read_input_file(inputfile)
   do ki=1,klabel
      read(10,*) xtl(ki)  ! Column headers
   end do
-  read(10,'(A50)') label(4)
+  read(10,'(/,A50)') label(4)
   read(10,'(A50)') title  ! Plot title
   
   read(10,*) xt
