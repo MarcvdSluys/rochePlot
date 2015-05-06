@@ -44,12 +44,12 @@ module input_data
   integer :: klabel, ktel
   integer :: blen, iscr
   
-  real :: csep, rm1(ng),rm2(ng),pb(ng),rad1(ng),rad2(ng), age_mc(ng)
+  real :: Csep, rm1(ng),rm2(ng),pb(ng),rad1(ng),rad2(ng), age_mc(ng)
   real :: rsep(ng),rlag(ng),rlef(ng),rrig(ng), hei(ng)
   real :: xtl(5), xt,yt
   logical :: ce(ng)
   
-  character :: txt(ng)*(50), label(5)*(50), text*(50), title*(50), programname*(199)
+  character :: txt(ng)*(50), label(5)*(50), text*(50), title*(50)
   
 end module input_data
 !***********************************************************************************************************************************
@@ -106,32 +106,29 @@ end module roche_data
 !! - finally, the individual graphs are made
 
 program rocheplot
+  use SUFR_constants, only: set_SUFR_constants, pc_g, msun,rsun, pi2,c3rd
   use SUFR_numerics, only: sne0
-  use input_data, only: label,csep,ktel, text,xt,yt
+  use input_data, only: label,Csep,ktel, text,xt,yt
   use plot_settings, only: use_colour, outputfile
   
   implicit none
   integer :: in,itel, command_argument_count
-  real :: gravc,sunm,sunr,twopi
   character :: inputfile*(50)
   
   
-  !*** Initialise code:
+  ! *** Initialise code:
+  call set_SUFR_constants()  ! Initialise constants from libSUFR
   use_colour = .false.  ! B/W
   use_colour = .true.   ! Use colour
   
   ! Column headers:
   label = [character(len=50) :: 'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', 'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', '']
   
-  ! Constant for orbital separation from mass and orbital period:
-  gravc = 6.668e-8      ! G
-  sunm  = 1.989e33      ! Mo
-  sunr  = 6.96e10       ! Ro
-  twopi = 8.*atan(1.0)  ! 2pi
-  csep = ((24.*3600./twopi)**2 * gravc*sunm)**(1./3.) / sunr
+  ! Constant for orbital separation from mass and orbital period - "Kepler's constant":
+  Csep = real( ((86400.d0/pi2)**2 * pc_g*msun)**c3rd / rsun )  ! Csep = ((1day/2pi)^2 * GMo)^1/3 / Ro
   
   
-  !*** Read command-line parameters, set input and output filenames:
+  ! *** Read command-line parameters, set input and output filenames:
   inputfile = 'RochePlot.dat'
   outputfile = 'RocheLobes.eps'
   if(command_argument_count().eq.1) then
@@ -142,22 +139,22 @@ program rocheplot
   end if
   
   
-  !*** Read the input file:
+  ! *** Read the input file:
   call read_input_file(trim(inputfile))
   
   
-  !*** Initialise plot output; open output file, set page, create a white background, print plot title and column headers:
+  ! *** Initialise plot output; open output file, set page, create a white background, print plot title and column headers:
   call initialise_plot()
   
   
-  !*** Plot the different binaries:
+  ! *** Plot the different binaries:
   do itel=1,ktel
      call plot_binary(itel)  ! Plot each binary; Roche lobes, stars and labels
   end do  ! do itel = 1,ktel
   
   
   
-  !*** Finish plot:
+  ! *** Finish plot:
   
   ! Plot scale bar:
   call plot_scale_bar()
@@ -182,6 +179,7 @@ end program rocheplot
 !! \param inputfile  Name of the input file
 
 subroutine read_input_file(inputfile)
+  use SUFR_constants, only: program_name, rc3rd
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
   use roche_data, only: q,q11, const1,CEdiff
@@ -189,31 +187,24 @@ subroutine read_input_file(inputfile)
   implicit none
   character, intent(in) :: inputfile*(*)
   
-  integer :: io, in, itel, ki, nev
+  integer :: io, itel, ki, nev
   real :: asep, dfx,dx,fx, rtsafe
   real :: x,x1,x2,xacc,xright,xshift, xmargin, xmin,xmax
   character :: tmpstr
   
   external :: rlimit
   
-  
-  ! Determine program name:
-  call get_command_argument(0, programname)
-  in = index(programname,'/',back=.true.)
-  if(in.ne.len(programname)) programname = programname(in+1:)
-  
-  
   ! Open input file:
   open(unit=10,form='formatted',status='old',file=trim(inputfile), iostat=io)
   
   if(io.ne.0) then
      write(0,'(/,A)') ' Error: file not found: '//trim(inputfile)
-     write(0,'(/,A)') ' '//trim(programname)//' needs an input file to run.  The default file name is RochePlot.dat.'
-     write(0,'(A)') ' Syntax: '//trim(programname)//' <input_file>'
+     write(0,'(/,A)') ' '//trim(program_name)//' needs an input file to run.  The default file name is RochePlot.dat.'
+     write(0,'(A)') ' Syntax: '//trim(program_name)//' <input_file>'
      write(0,'(/,A,/)') ' Aborting...'
      stop
   else
-     write(*,'(/,A,/)') ' '//trim(programname)//': opening input file '//trim(inputfile)
+     write(*,'(/,A,/)') ' '//trim(program_name)//': opening input file '//trim(inputfile)
   end if
   
   read(10,*) tmpstr
@@ -244,7 +235,7 @@ subroutine read_input_file(inputfile)
      
      if(io.lt.0) return  ! end of file
      
-     rsep(itel) = csep * ((rm1(itel)+rm2(itel)) * pb(itel)**2)**(1./3.)  ! Kepler: P_orb -> a_orb
+     rsep(itel) = Csep * ((rm1(itel)+rm2(itel)) * pb(itel)**2)**rc3rd  ! Kepler: P_orb -> a_orb
      ktel = itel
      
      
