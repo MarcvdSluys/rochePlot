@@ -1,8 +1,16 @@
-!> \file  RochePlot.f90  Plots Roche lobes for given evolutionary phases of a binary
+!> \file  RochePlot.f90  Schematically plot the evolution of a binary star
 !!
 !!  \mainpage RochePlot documentation
-!!  RochePlot is a Fortran code using PGPlot to plot a series of binaries to illustrate the key stages in the evolution of a
-!!  binary star.  The code was originally written by Frank Verbunt and further developed by Marc van der Sluys.
+!!  <a href="http://rocheplot.sourceforge.net">RochePlot</a> is a Fortran code using 
+!!  <a href="http://www.astro.caltech.edu/~tjp/pgplot/" target="_blank">PGPlot</a> to 
+!!  plot a series of binaries to illustrate the key stages in the evolution of a binary 
+!!  star.  The code was originally written by Frank Verbunt and further developed by 
+!!  Marc van der Sluys.  The source code for RochePlot can be found at 
+!!  http://rocheplot.sourceforge.net.
+!!
+!!  \par
+!!  &copy; 1993-2015, Frank Verbunt, Marc van der Sluys
+!!
 !!
 !!  \par
 !!  This file is part of RochePlot.
@@ -23,8 +31,6 @@
 !!  You should have received a copy of the GNU General Public License
 !!  along with RochePlot.  If not, see http://www.gnu.org/licenses/.
 !!
-!!
-!!  (c) 1993-2012, Frank Verbunt, Marc van der Sluys
 
 
 !***********************************************************************************************************************************
@@ -161,7 +167,7 @@ program rocheplot
   ! Add texts, if necessary:
   if(xt.ne.0.) call pgtext(xt,yt,text)
   
-  call pgend
+  call pgend()
   
 end program rocheplot
 !***********************************************************************************************************************************
@@ -358,9 +364,9 @@ subroutine initialise_plot()
   if(iscr.eq.0) then
      write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
      if(use_colour) then
-        call pgbegin(0,''//trim(outputfile)//'/cps',1,1)
+        call pgbegin(0,''//trim(outputfile)//'/vcps',1,1)
      else
-        call pgbegin(0,''//trim(outputfile)//'/ps',1,1)
+        call pgbegin(0,''//trim(outputfile)//'/vps',1,1)
      end if
      lw = 2
      call pgscf(1)
@@ -691,7 +697,7 @@ subroutine plot_binary(itel)
         call pgptxt(xtl(k),yshift, 0.,0.0, trim(label(k)))  ! Align left
      else
         call pgptxt(xtl(k),yshift, 0.,0.5, trim(label(k)))  ! Align centre
-     endif
+     end if
   end do
   
 end subroutine plot_binary
