@@ -104,6 +104,10 @@ end module roche_data
 !! - first all required parameters are read
 !! - then lobe sizes and positions are estimated
 !! - finally, the individual graphs are made
+!!
+!! \todo
+!! - move BW/colour selection to input file
+!!
 
 program rocheplot
   use SUFR_constants, only: set_SUFR_constants, pc_g, msun,rsun, pi2,c3rd
@@ -119,7 +123,7 @@ program rocheplot
   ! *** Initialise code:
   call set_SUFR_constants()  ! Initialise constants from libSUFR
   use_colour = .false.  ! B/W
-  use_colour = .true.   ! Use colour
+  use_colour = .true.   ! Use colour - CHECK: move to input file
   
   ! Column headers:
   label = [character(len=50) :: 'M\d1\u(M\d\(2281)\u)','M\d2\u(M\d\(2281)\u)', 'P\dorb\u(d)','M\dc\u(M\d\(2281)\u)', '']
@@ -154,7 +158,7 @@ program rocheplot
   
   
   
-  ! *** Finish plot:
+  ! *** Finalise plot:
   
   ! Plot scale bar:
   call plot_scale_bar()
@@ -180,6 +184,7 @@ end program rocheplot
 
 subroutine read_input_file(inputfile)
   use SUFR_constants, only: program_name, rc3rd
+  use SUFR_system, only: find_free_io_unit
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
   use roche_data, only: q,q11, const1,CEdiff
@@ -187,7 +192,7 @@ subroutine read_input_file(inputfile)
   implicit none
   character, intent(in) :: inputfile*(*)
   
-  integer :: io, itel, ki, nev
+  integer :: io, ip, itel, ki, nev
   real :: asep, dfx,dx,fx, rtsafe
   real :: x,x1,x2,xacc,xright,xshift, xmargin, xmin,xmax
   character :: tmpstr
@@ -195,7 +200,8 @@ subroutine read_input_file(inputfile)
   external :: rlimit
   
   ! Open input file:
-  open(unit=10,form='formatted',status='old',file=trim(inputfile), iostat=io)
+  call find_free_io_unit(ip)  ! Unit for input file
+  open(unit=ip,form='formatted',status='old',file=trim(inputfile), iostat=io)
   
   if(io.ne.0) then
      write(0,'(/,A)') ' Error: file not found: '//trim(inputfile)
@@ -207,12 +213,12 @@ subroutine read_input_file(inputfile)
      write(*,'(/,A,/)') ' '//trim(program_name)//': opening input file '//trim(inputfile)
   end if
   
-  read(10,*) tmpstr
-  read(10,*) klabel            ! Number of labels per line - currently 3, 4 or 5
-  read(10,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
+  read(ip,*) tmpstr
+  read(ip,*) klabel            ! Number of labels per line - currently 3, 4 or 5
+  read(ip,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
   if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
   
-  read(10,*) tmpstr
+  read(ip,*) tmpstr
   tmpstr = tmpstr  ! Remove 'unused' compiler warnings
   
   
@@ -223,11 +229,11 @@ subroutine read_input_file(inputfile)
   do itel=1,nev
      select case(klabel)
      case(3)
-        read(10,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel)
+        read(ip,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel)
      case(4)
-        read(10,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel)
+        read(ip,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel)
      case(5)
-        read(10,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
+        read(ip,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
      case default
         write(0,'(A,I3,A)') ' klabel =',klabel,' not supported, change the value in your input file.'
         stop
@@ -320,18 +326,18 @@ subroutine read_input_file(inputfile)
   
   
   ! Read the rest of the input file:
-  read(10,*) iscr
-  read(10,*) blen  ! Length of the scale bar
+  read(ip,*) iscr
+  read(ip,*) blen  ! Length of the scale bar
   do ki=1,klabel
-     read(10,*) xtl(ki)  ! Column headers
+     read(ip,*) xtl(ki)  ! Column headers
   end do
-  read(10,'(/,A50)') label(4)
-  read(10,'(A50)') title  ! Plot title
+  read(ip,'(/,A50)') label(4)
+  read(ip,'(A50)') title  ! Plot title
   
-  read(10,*) xt
-  read(10,*) yt
-  read(10,'(A)') text
-  close(10)
+  read(ip,*) xt
+  read(ip,*) yt
+  read(ip,'(A)') text
+  close(ip)
   
   
 end subroutine read_input_file
