@@ -106,6 +106,7 @@ end module roche_data
 !! - finally, the individual graphs are made
 
 program rocheplot
+  use SUFR_numerics, only: sne0
   use input_data, only: label,csep,ktel, text,xt,yt
   use plot_settings, only: use_colour, outputfile
   
@@ -165,7 +166,7 @@ program rocheplot
   call plot_rotation_axis()
   
   ! Add texts, if necessary:
-  if(xt.ne.0.) call pgtext(xt,yt,text)
+  if(sne0(xt)) call pgtext(xt,yt,text)
   
   call pgend()
   
@@ -350,6 +351,7 @@ end subroutine read_input_file
 !> \brief  Initialise plot output; open output file, set page, create a white background, print plot title and column headers
 
 subroutine initialise_plot()
+  use SUFR_numerics, only: sne0
   use input_data, only: klabel, label,iscr,xtl,title
   use plot_settings, only: use_colour, xleft,xrigh,ysize,ymargin, outputfile, lw
   
@@ -396,7 +398,7 @@ subroutine initialise_plot()
   ! Print column headers:
   call pgslw(2*lw)
   do kl=1,klabel
-     if(xtl(kl).ne.0.) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
+     if(sne0(xtl(kl))) call pgptxt(xtl(kl),0.,0.,0.5,trim(label(kl)))
   end do
   call pgslw(lw)
   
@@ -504,6 +506,8 @@ subroutine plot_binary(itel)
   real :: y1,y2,ysq, xtmp,ytmp, dy, xmap
   
   external :: rline
+  
+  xtmp=0.; ytmp=0.    ! Make sure variables are defined
   
   xm1 = rm1(itel)     ! M1
   xm2 = rm2(itel)     ! M2
@@ -745,6 +749,7 @@ end function xmap
 !! \see Numerical recipes, par.9.4 (p.258 / 359)
 
 function rtsafe(funcd, x1,x2, xacc)
+  use SUFR_numerics, only: seq
   implicit none
   integer, parameter :: maxit=100
   integer :: j
@@ -777,13 +782,13 @@ function rtsafe(funcd, x1,x2, xacc)
         dxold = dx
         dx = 0.5*(xh-xl)
         rtsafe = xl+dx
-        if(xl.eq.rtsafe) return
+        if(seq(xl,rtsafe)) return
      else
         dxold = dx
         dx = f/df
         temp = rtsafe
         rtsafe = rtsafe-dx
-        if(temp.eq.rtsafe) return
+        if(seq(temp,rtsafe)) return
      end if
      if(abs(dx).lt.xacc) return
      call funcd(rtsafe,f,df)
