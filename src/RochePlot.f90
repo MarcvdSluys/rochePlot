@@ -181,10 +181,13 @@ end program rocheplot
 !> \brief  Read the lines of the input file containting evolutionary states and compute positions of the Roche lobes
 !!
 !! \param inputfile  Name of the input file
+!!
+!! \todo
+!! - use dynamic arrays for more freedom in the number of binaries drawn (ng)
 
 subroutine read_input_file(inputfile)
   use SUFR_constants, only: program_name, rc3rd
-  use SUFR_system, only: find_free_io_unit
+  use SUFR_system, only: find_free_io_unit, error, syntax_quit
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
   use roche_data, only: q,q11, const1,CEdiff
@@ -204,11 +207,8 @@ subroutine read_input_file(inputfile)
   open(unit=ip,form='formatted',status='old',file=trim(inputfile), iostat=io)
   
   if(io.ne.0) then
-     write(0,'(/,A)') ' Error: file not found: '//trim(inputfile)
-     write(0,'(/,A)') ' '//trim(program_name)//' needs an input file to run.  The default file name is RochePlot.dat.'
-     write(0,'(A)') ' Syntax: '//trim(program_name)//' <input_file>'
-     write(0,'(/,A,/)') ' Aborting...'
-     stop
+     call error('File not found: '//trim(inputfile))
+     call syntax_quit('<input file>',1, trim(program_name)//' needs an input file to run.  The default file name is RochePlot.dat.')
   else
      write(*,'(/,A,/)') ' '//trim(program_name)//': opening input file '//trim(inputfile)
   end if
@@ -216,7 +216,8 @@ subroutine read_input_file(inputfile)
   read(ip,*) tmpstr
   read(ip,*) klabel            ! Number of labels per line - currently 3, 4 or 5
   read(ip,*) nev               ! Number of evolutionary phases to plot = number of data lines in input file
-  if(nev.gt.ng) write(0,'(A)') 'Increase the value of ng!'
+  !                              CHECK: use dynamic arrays:
+  if(nev.gt.ng) call error('You must increase the value of ng in order to plot all desired binaries!')
   
   read(ip,*) tmpstr
   tmpstr = tmpstr  ! Remove 'unused' compiler warnings
@@ -235,7 +236,7 @@ subroutine read_input_file(inputfile)
      case(5)
         read(ip,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
      case default
-        write(0,'(A,I3,A)') ' klabel =',klabel,' not supported, change the value in your input file.'
+        write(0,'(A,I3,A)') '  klabel =',klabel,' is not supported.  Please change the value in your input file.'
         stop
      end select
      
@@ -321,7 +322,7 @@ subroutine read_input_file(inputfile)
   xleft = xmin - xmargin
   xrigh = xmax + xmargin*4.
   
-  write(6,'(/,A,3F12.3)') ' Plot limits: ',xleft,xrigh,ysize
+  write(*,'(/,A,3F12.3)') ' Plot limits: ',xleft,xrigh,ysize
   
   
   
@@ -361,7 +362,7 @@ subroutine initialise_plot()
   
   
   if(iscr.eq.0) then
-     write(6,'(/,A,/)')' Saving plot as '//trim(outputfile)
+     write(*,'(/,A,/)')' Saving plot as '//trim(outputfile)
      if(use_colour) then
         call pgbegin(0,''//trim(outputfile)//'/vcps',1,1)
      else
@@ -728,7 +729,7 @@ function xmap(il,nl, l1,lim, lr)
   else if(lr.eq.2) then
      xmap = cos((1.0-real(il-1)/real(nl+1))*pio2) * (lim-l1) + l1
   else
-     write(0,'(/,A,I4,/)') '*** xmap(): ERROR:  parameter lr should be 1 or 2, not',lr
+     write(0,'(/,A,I0,/)') '*** xmap(): ERROR:  parameter lr should be 1 or 2, not ',lr
      stop
   end if
   
@@ -746,6 +747,7 @@ end function xmap
 !! \see Numerical recipes, par.9.4 (p.258 / 359)
 
 function rtsafe(funcd, x1,x2, xacc)
+  use SUFR_system, only: warn
   use SUFR_numerics, only: seq
   implicit none
   integer, parameter :: maxit=100
@@ -756,7 +758,7 @@ function rtsafe(funcd, x1,x2, xacc)
   
   call funcd(x1,fl,df)
   call funcd(x2,fh,df)
-  if(fl*fh.ge.0.) write(0,'(2(A,2ES12.3))') ' rtsafe(): root must be bracketed:  x1,x2:',x1,x2, '  fl,fh:',fl,fh
+  if(fl*fh.ge.0.) write(0,'(2(A,2ES12.3))') '  rtsafe(): root must be bracketed:  x1,x2:',x1,x2, '  fl,fh:',fl,fh
   if(fl.lt.0.) then
      xl=x1
      xh=x2
@@ -798,7 +800,7 @@ function rtsafe(funcd, x1,x2, xacc)
      end if
   end do
   
-  write(0,'(A)')' rtsafe() exceeded maximum number of iterations'
+  call warn('rtsafe() exceeded maximum number of iterations', 0)
   
 end function rtsafe
 !***********************************************************************************************************************************
