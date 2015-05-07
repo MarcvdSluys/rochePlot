@@ -112,6 +112,8 @@ end module roche_data
 program rocheplot
   use SUFR_constants, only: set_SUFR_constants, pc_g, msun,rsun, pi2,c3rd
   use SUFR_numerics, only: sne0
+  
+  use RP_version, only: print_rochePlot_version
   use input_data, only: label,Csep,ktel, text,xt,yt
   use plot_settings, only: use_colour, outputfile
   
@@ -120,8 +122,14 @@ program rocheplot
   character :: inputfile*(50)
   
   
+  ! Print version:
+  write(*,'(/,A)', advance='no') '  '
+  call print_rochePlot_version(6)  ! No EoL
+  write(*,'(A)') ' - rochePlot.sf.net'
+  
+  
   ! *** Initialise code:
-  call set_SUFR_constants()  ! Initialise constants from libSUFR
+  call set_SUFR_constants()        ! Initialise constants from libSUFR
   use_colour = .false.  ! B/W
   use_colour = .true.   ! Use colour - CHECK: move to input file
   
@@ -204,7 +212,7 @@ subroutine find_example_input_file(inputfile)
      inquire(file=trim(inputfile), exist=found)  ! Check whether the file exists
      
      if(found) then
-        write(*,'(A)') 'YES!'
+        write(*,'(A)') 'yes'
         return
      else
         write(*,'(A)') 'no'
@@ -230,7 +238,7 @@ end subroutine find_example_input_file
 !! - use dynamic arrays for more freedom in the number of binaries drawn (ng)
 
 subroutine read_input_file(inputfile)
-  use SUFR_constants, only: program_name, rc3rd
+  use SUFR_constants, only: rc3rd
   use SUFR_system, only: find_free_io_unit, error, file_open_error_quit
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
@@ -253,7 +261,7 @@ subroutine read_input_file(inputfile)
   if(io.ne.0) then
      call file_open_error_quit(trim(inputfile), 1, 1)
   else
-     write(*,'(/,A,/)') '  '//trim(program_name)//': opening input file '//trim(inputfile)
+     write(*,'(/,A,/)') '  Opening input file '//trim(inputfile)
   end if
   
   read(ip,*) tmpstr
@@ -760,17 +768,16 @@ end subroutine plot_binary
 !! \retval xmap  Mapped position of il-th x value
 
 function xmap(il,nl, l1,lim, lr)
+  use SUFR_constants, only: rpio2  ! pi/2
   implicit none
   integer, intent(in) :: il, nl, lr
   real, intent(in) :: l1,lim
-  real :: xmap, pio2
-  
-  pio2 = 2*atan(1.)   ! pi/2
+  real :: xmap
   
   if(lr.eq.1) then
-     xmap = (1.0-cos(real(il-1)/real(nl)*pio2))   * (l1-lim) + lim
+     xmap = (1.0-cos(real(il-1)/real(nl)*rpio2))   * (l1-lim) + lim
   else if(lr.eq.2) then
-     xmap = cos((1.0-real(il-1)/real(nl+1))*pio2) * (lim-l1) + l1
+     xmap = cos((1.0-real(il-1)/real(nl+1))*rpio2) * (lim-l1) + l1
   else
      write(0,'(/,A,I0,/)') '*** xmap(): ERROR:  parameter lr should be 1 or 2, not ',lr
      stop 1
