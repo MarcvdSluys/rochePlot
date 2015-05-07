@@ -133,13 +133,16 @@ program rocheplot
   
   
   ! *** Read command-line parameters, set input and output filenames:
-  inputfile = 'RochePlot.dat'
+  inputfile = 'rochePlot.dat'
   outputfile = 'RocheLobes.eps'
   if(command_argument_count().eq.1) then
      call get_command_argument(1, inputfile)
      in = index(inputfile,'.dat', back=.true.)  ! Find last dot in input file name
      ! When file.dat is input, use RocheLobes_file.eps as output:
      if(in.gt.0.and.in.lt.len(inputfile)) outputfile = 'RocheLobes_'//inputfile(1:in-1)//'.eps'
+     
+  else  ! No input file specified
+     call find_example_input_file(inputfile)
   end if
   
   
@@ -175,6 +178,47 @@ end program rocheplot
 !***********************************************************************************************************************************
 
 
+!***********************************************************************************************************************************
+!> \brief  If no input file is specified, try to find the example input file called rochePlot.dat
+!!
+!! \retvat inputfile  Name of the input file
+!!
+
+subroutine find_example_input_file(inputfile)
+  use SUFR_constants, only: homedir
+  implicit none
+  character, intent(out) :: inputfile*(*)
+  integer, parameter :: Ndir=9
+  integer :: di
+  character :: dirs(Ndir)*(199)
+  logical :: found
+  
+  dirs = [character(len=199) :: '.', 'share', '../share', trim(homedir)//'/usr/share', trim(homedir)//'/usr/local/share', &
+       '/usr/share', '/usr/local/share', '/opt/share', '/op/local/share']
+  
+  write(*,'(/,A)') '  No input file was specified.  Trying to find the example file rochePlot.dat...'
+  
+  do di=1,Ndir
+     inputfile = trim(dirs(di))//'/rochePlot.dat'
+     write(*,'(A)', advance='no') '    checking '//trim(inputfile)//'...     '
+     inquire(file=trim(inputfile), exist=found)  ! Check whether the file exists
+     
+     if(found) then
+        write(*,'(A)') 'YES!'
+        return
+     else
+        write(*,'(A)') 'no'
+     end if
+  end do
+  
+  write(*,'(/,A)') '  You did not specify an input file, and I cannot find the example file rochePlot.dat.  It should have come'
+  write(*,'(A)') '  with the program, and might have been installed in a place like /usr/share.  If not, see '
+  write(*,'(A,/)') '  http://rochePlot.sf.net for a copy.'
+  
+  stop 1
+  
+end subroutine find_example_input_file
+!***********************************************************************************************************************************
 
 
 !***********************************************************************************************************************************
@@ -187,7 +231,7 @@ end program rocheplot
 
 subroutine read_input_file(inputfile)
   use SUFR_constants, only: program_name, rc3rd
-  use SUFR_system, only: find_free_io_unit, error, syntax_quit
+  use SUFR_system, only: find_free_io_unit, error, file_open_error_quit
   use input_data
   use plot_settings, only: xleft,ysize,ymargin,xrigh
   use roche_data, only: q,q11, const1,CEdiff
@@ -207,10 +251,9 @@ subroutine read_input_file(inputfile)
   open(unit=ip,form='formatted',status='old',file=trim(inputfile), iostat=io)
   
   if(io.ne.0) then
-     call error('File not found: '//trim(inputfile))
-     call syntax_quit('<input file>',1, trim(program_name)//' needs an input file to run.  The default file name is RochePlot.dat.')
+     call file_open_error_quit(trim(inputfile), 1, 1)
   else
-     write(*,'(/,A,/)') ' '//trim(program_name)//': opening input file '//trim(inputfile)
+     write(*,'(/,A,/)') '  '//trim(program_name)//': opening input file '//trim(inputfile)
   end if
   
   read(ip,*) tmpstr
@@ -237,7 +280,7 @@ subroutine read_input_file(inputfile)
         read(ip,*, iostat=io) rm1(itel), rm2(itel), pb(itel), rad1(itel), rad2(itel), age_mc(itel), txt(itel)
      case default
         write(0,'(A,I3,A)') '  klabel =',klabel,' is not supported.  Please change the value in your input file.'
-        stop
+        stop 1
      end select
      
      if(io.lt.0) return  ! end of file
@@ -292,7 +335,7 @@ subroutine read_input_file(inputfile)
      rlef(ktel) = rtsafe(rlimit, x1,x2, xacc)  ! Left limit
      
      
-     write(*,'(A,I3,A1,4G12.3)') ' Roche limits binary',ktel,':', rlef(ktel), rlag(ktel), rrig(ktel), hei(ktel)
+     write(*,'(A,I0,A1,4G12.3)') '  Roche limits binary ',ktel,':', rlef(ktel), rlag(ktel), rrig(ktel), hei(ktel)
      
      
      ! Calculate limits after enlarging and shift, and keep track of minima and maxima:
@@ -322,7 +365,7 @@ subroutine read_input_file(inputfile)
   xleft = xmin - xmargin
   xrigh = xmax + xmargin*4.
   
-  write(*,'(/,A,3F12.3)') ' Plot limits: ',xleft,xrigh,ysize
+  write(*,'(/,A,3F12.3)') '  Plot limits: ',xleft,xrigh,ysize
   
   
   
@@ -362,7 +405,7 @@ subroutine initialise_plot()
   
   
   if(iscr.eq.0) then
-     write(*,'(/,A,/)')' Saving plot as '//trim(outputfile)
+     write(*,'(/,A,/)')'  Saving plot as '//trim(outputfile)
      if(use_colour) then
         call pgbegin(0,''//trim(outputfile)//'/vcps',1,1)
      else
@@ -730,7 +773,7 @@ function xmap(il,nl, l1,lim, lr)
      xmap = cos((1.0-real(il-1)/real(nl+1))*pio2) * (lim-l1) + l1
   else
      write(0,'(/,A,I0,/)') '*** xmap(): ERROR:  parameter lr should be 1 or 2, not ',lr
-     stop
+     stop 1
   end if
   
 end function xmap
