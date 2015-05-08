@@ -1,0 +1,49 @@
+
+rochePlot INSTALL
+
+
+RochePlot has the following dependencies.  All can be downloaded for free.
+CMake:    http://www.cmake.org
+PGPlot:   http://www.astro.caltech.edu/~tjp/pgplot/
+libSUFR:  http://libsufr.sf.net
+
+You can use CMake to configure and compile the code.  RochePlot needs PGPlot to do the
+plotting.  libSUFR provides some general Fortran routines.
+
+
+To compile and install the code (in the CMake default directory /usr/local/), 
+from the main package directory (the one that contains the file CMakeLists.txt), do:
+
+ $ mkdir build && cd build/
+ $ cmake ..
+ $ make
+ $ sudo make install
+
+
+To install the code in a specific directory, e.g. the Linux default /usr/, 
+   replace the "cmake .." step above with:
+
+ $ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ..
+
+This will install binaries in /usr/bin/, libraries in /usr/lib/, etc.
+
+
+If you're installing the code somewhere in your home directory, you can leave out
+   the sudo command in the last step:
+
+ $ make install
+
+
+To force CMake to compile the code with your favourite compiler, prepend the cmake line 
+   with e.g. FC=gfortran:
+
+ $ FC=gfortran cmake ..
+
+
+To compile the code without installing it anywhere, leave out the last step
+   ((sudo) make install)
+
+
+The code comes with an example input file, which should be installed as e.g.
+/usr/share/rochePlot/rochePlot.dat
+
