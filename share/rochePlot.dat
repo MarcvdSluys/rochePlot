@@ -1,4 +1,4 @@
-# RochePlot.dat: default input file for RochePlot - rocheplot.sourceforge.net
+# RochePlot.dat: default input file for rochePlot - rocheplot.sourceforge.net
 
 4               klabel: number of labels per line  (3 or 4, needs 5 or 6 columns in table below)
 5               nev: Number of evolutionary phases plotted (number of lines in table below)
@@ -25,7 +25,7 @@ Example binary                                       Title of the plot (50 chars
 0.              yt: y-position of text, next line: text (max 50 chars)
 
 
-# RochePlot.dat: default input file for RochePlot
+# rochePlot.dat: default input file for rochePlot
 # See http://rocheplot.sourceforge.net for more information
 #
 # Formatting is important!
