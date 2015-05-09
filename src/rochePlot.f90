@@ -147,7 +147,8 @@ program rocheplot
      call get_command_argument(1, inputfile)
      in = index(inputfile,'.dat', back=.true.)  ! Find last dot in input file name
      ! When file.dat is input, use RocheLobes_file.eps as output:
-     if(in.gt.0.and.in.lt.len(inputfile)) outputfile = 'RocheLobes_'//inputfile(1:in-1)//'.eps'
+     if(in.gt.0 .and. in.lt.len(inputfile) .and. trim(inputfile).ne.'rochePlot.dat')  &
+          outputfile = 'RocheLobes_'//inputfile(1:in-1)//'.eps'
      
   else  ! No input file specified
      call find_example_input_file(inputfile)
@@ -201,8 +202,9 @@ subroutine find_example_input_file(inputfile)
   character :: dirs(Ndir)*(199)
   logical :: found
   
-  dirs = [character(len=199) :: '.', 'share', '../share', trim(homedir)//'/usr/share', trim(homedir)//'/usr/local/share', &
-       '/usr/share', '/usr/local/share', '/opt/share', '/op/local/share']
+  dirs = [character(len=199) :: '.', 'share', '../share', trim(homedir)//'/usr/share/rochePlot', &
+       trim(homedir)//'/usr/local/share/rochePlot', '/usr/share/rochePlot', '/usr/local/share/rochePlot', &
+       '/opt/share/rochePlot', '/opt/local/share/rochePlot']
   
   write(*,'(/,A)') '  No input file was specified.  Trying to find the example file rochePlot.dat...'
   
@@ -543,6 +545,7 @@ end subroutine plot_disc
 !! \param itel  Number of the current binary/evolutionary state (1-ktel)
 
 subroutine plot_binary(itel)
+  use SUFR_text, only: real2str
   use input_data, only: npl, age_mc, rm1,rm2,rsep,rlag,rlef,rrig,hei,rad1,rad2,klabel,label,ktel,txt, pb,xtl, ce
   use plot_settings, only: xpl,ypl,ypl2, use_colour, ysize,ymargin, yshift
   use roche_data, only: q,q11, const1,const2,CEdiff, xsq,onexsq
@@ -729,17 +732,17 @@ subroutine plot_binary(itel)
   
   ! Write labels:
   if(klabel.eq.3) then
-     write(label(1),'(F7.3)') rm1(itel)
-     write(label(2),'(F7.3)') rm2(itel)
+     label(1) = real2str(rm1(itel),3)  ! F0 format with 3 decimals
+     label(2) = real2str(rm2(itel),3)  ! F0 format with 3 decimals
   else
-     write(label(1),'(F5.2)') rm1(itel)
-     write(label(2),'(F5.2)') rm2(itel)
+     label(1) = real2str(rm1(itel),2)  ! F0 format with 2 decimals
+     label(2) = real2str(rm2(itel),2)  ! F0 format with 2 decimals
      if(maxval(age_mc(1:ktel)).lt.2.) then
-        write(label(4),'(F7.3)') age_mc(itel)
+        label(4) = real2str(age_mc(itel),3)  ! F0 format with 3 decimals
      else if(maxval(age_mc(1:ktel)).lt.50.) then
-        write(label(4),'(F6.2)') age_mc(itel)
+        label(4) = real2str(age_mc(itel),2)  ! F0 format with 2 decimals
      else
-        write(label(4),'(I3)') nint(age_mc(itel))
+        write(label(4),'(I0)') nint(age_mc(itel))
      end if
      if(klabel.ge.5) write(label(5),'(A)') trim(txt(itel))
   end if
