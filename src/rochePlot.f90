@@ -1,11 +1,11 @@
 !> \file  rochePlot.f90  Schematically plot the evolution of a binary star
 !!
-!!  \mainpage RochePlot documentation
+!!  \mainpage rochePlot documentation
 !!  <a href="http://rocheplot.sourceforge.net">RochePlot</a> is a Fortran code using 
 !!  <a href="http://www.astro.caltech.edu/~tjp/pgplot/" target="_blank">PGPlot</a> to 
 !!  plot a series of binaries to illustrate the key stages in the evolution of a binary 
 !!  star.  The code was originally written by Frank Verbunt and further developed by 
-!!  Marc van der Sluys.  The source code for RochePlot can be found at 
+!!  Marc van der Sluys.  The source code for rochePlot can be found at 
 !!  http://rocheplot.sourceforge.net.
 !!
 !!  \par
@@ -13,7 +13,7 @@
 !!
 !!
 !!  \par
-!!  This file is part of RochePlot.
+!!  This file is part of rochePlot.
 !!  
 !!  \par
 !!  RochePlot is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 !!  
 !!  \par
 !!  You should have received a copy of the GNU General Public License
-!!  along with RochePlot.  If not, see http://www.gnu.org/licenses/.
+!!  along with rochePlot.  If not, see http://www.gnu.org/licenses/.
 !!
 
 
