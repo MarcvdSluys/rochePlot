@@ -1,4 +1,4 @@
-!> \file  RochePlot.f90  Schematically plot the evolution of a binary star
+!> \file  rochePlot.f90  Schematically plot the evolution of a binary star
 !!
 !!  \mainpage RochePlot documentation
 !!  <a href="http://rocheplot.sourceforge.net">RochePlot</a> is a Fortran code using 
@@ -190,7 +190,7 @@ end program rocheplot
 !***********************************************************************************************************************************
 !> \brief  If no input file is specified, try to find the example input file called rochePlot.dat
 !!
-!! \retvat inputfile  Name of the input file
+!! \retval inputfile  Name of the input file
 !!
 
 subroutine find_example_input_file(inputfile)
